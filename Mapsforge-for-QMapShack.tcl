@@ -354,7 +354,7 @@ if {$tcl_platform(os) == "Windows NT"} {
     set rc [catch {registry get \
 	{HKEY_CURRENT_USER\SOFTWARE\QLandkarte\QMapShack\Canvas} $item} \
 	value]
-    if {!$rc} {set $item $value}
+    if {!$rc} {set $item [lindex $value 0]}
   }
 } elseif {$tcl_platform(os) == "Linux"} {
   set rc [catch {open ~/.config/QLandkarte/QMapShack.conf r} fd]
@@ -365,7 +365,8 @@ if {$tcl_platform(os) == "Windows NT"} {
     foreach item {cachePath mapPath} {
       set index [lsearch -regexp $data "^$item="]
       if {$index < 0} {continue}
-      regexp {^.*?=(.*)$} [lindex $data $index] "" $item
+      regexp {^.*?=(.*)$} [lindex $data $index] "" value
+      set $item [string trim [lindex [split $value ,] 0]]
     }
     unset data
   }
@@ -374,7 +375,7 @@ if {![info exists cachePath] || ![info exists mapPath]} {
   error_message [mc e06] exit
 }
 set tiles_folder $cachePath
-set tms_folder [string trim [lindex [split $mapPath ,] 0]]
+set tms_folder $mapPath
 unset cachePath mapPath
 
 # Check commands & folders
