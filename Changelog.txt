@@ -1,3 +1,8 @@
+2022-04-23 (2)
+
+- Fix bug evaluating maps folder on operating system Windows,
+  if more than one folder was defined.
+
 2022-04-23
 
 - Get QMapShack's online maps folder and tile cache folder from QMapShack's configuration.
