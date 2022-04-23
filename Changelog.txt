@@ -1,0 +1,8 @@
+2022-04-23
+
+- Get QMapShack's online maps folder and tile cache folder from QMapShack's configuration.
+  Script variables "tms_folder" and "tiles_folder" from ini file are no longer required.
+- Script variable "ip_address" from ini file is no longer required.
+- Add optional hillshading as alpha-transparent overlay ("Hillshading as map").
+- Enhance console output and make it more readable.
+- Drop support for tile server versions before version 0.17.1.

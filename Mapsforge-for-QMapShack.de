@@ -28,15 +28,16 @@ l17	"Mapsforge-Thema"
 l18	"Themenstil"
 
 e01	"%s '%s'\nmit Prozess-ID %d läuft bereits"
-e01q	"Prozess durch 'kill' beenden\nund neu starten?"
-e02	"Betriebssytem %s nicht unterstützt"
-e03	"Befehl '%s' in\nVariable '%s' ist nicht ausführbar"
-e04	"Ordner '%s' in\nVariable '%s' existiert nicht"
+e02	"Prozess durch 'kill' beenden\nund neu starten?"
+e03	"Betriebssytem %s nicht unterstützt"
+e04	"Befehl '%s' in\nVariable '%s' ist nicht ausführbar"
+e05	"Ordner '%s' in\nVariable '%s' existiert nicht"
+e06	"Karten- & Kachelordner von QMapShack noch nicht definiert!\nSetze Ordner in QMapShack über 'Datei -> Kartenverzeichnisse angeben'"
+e07	"Mapsforge Tile Server Version ist '%s'.\nMindestens Version '%s' ist erforderlich!"
 e11	"Keine Mapsforge-Karte gefunden"
 
 c01	"Overlays zum Stil auswählen"
 c02	"Schummerung konfigurieren"
-c02t	"Schummerung muss im\nMapsforge-Thema aktiviert sein!"
 c03	"Skalierung & Farben"
 c04	"Server konfigurieren"
 
@@ -57,15 +58,15 @@ x04	"Java-Archiv des Servers"
 x11	"Server-Konfiguration"
 x12	"Rendering-Engine"
 x13	"Netzwerk-Interface(s)"
-x14	"TCP-Port"
-x15	"Größe der TCP-Accept-Queue"
-x16	"Minimum gleichzeitiger Threads"
-x17	"Maximum gleichzeitiger Threads"
+x15	"TCP-Port"
+x16	"Größe der TCP-Accept-Queue"
+x17	"Minimum gleichzeitiger Threads"
+x18	"Maximum gleichzeitiger Threads"
 
 b01	"Starten"
-b01t	"Hinweis:\nKarte 'Mapsforge' in QMapShack aktivieren.\nNach Änderung von Einstellungen\ndiesen Knopf 'Starten' erneut drücken,\ndann Kartenliste in QMapShack rechtsklicken\nund QMapShack-Karten erneut laden!"
+b01t	"Karte 'Mapsforge Map' in QMapShack\naktivieren. Nach Änderung von Einstellungen\ndiesen Knopf 'Starten' erneut drücken,\ndann Kartenliste in QMapShack rechtsklicken\nund QMapShack-Karten erneut laden!"
 b02	"Beenden"
-b02t	"Beenden und QMapShack schließen"
+b02t	"QMapShack schließen und beenden"
 
 e41	"Keine Mapsforge-Karte(n) ausgewählt"
 e45	"DEM-Ordner fehlt oder nicht gültig"
@@ -74,12 +75,20 @@ m51	"Prozess %d (%s) gestartet"
 m52	"Prozess %d (%s) beendet"
 m53	"Prozess %d (%s) durch 'kill' beendet"
 m54	"Starte %s"
-m55	"Unerwartetes Ende von Mapsforge Tile Server"
+m55	"Unerwartetes Ende von %s"
 m56	"Suche Desktop-Fenster von Prozess %d (%s)"
 m57	"Keine Desktop-Fenster von Prozess %d (%s) gefunden"
 m58	"Sende Window-Manager-Nachricht 'Schließen' an Prozess %d (%s)"
+m59	"%s nicht gestartet.\nTCP-Port '%s' bereits in Benutzung"
+m60	"Lösche QMapShack-Kachelspeicher '%s'"
+m61	"Lösche QMapShack-Kartendatei '%s'"
+m62	"Erzeuge QMapShack-Kartendatei '%s'"
 
 c80	"Schummerung einschalten"
+c81	"Schummerung auf Karte"
+c81t	"Schummerung muss im\nMapsforge-Thema aktiviert sein"
+c82	"Schummerung als Karte"
+c82t	"Karte 'Mapsforge Hillshading'\nin QMapShack aktivieren"
 
 l81	"DEM-Ordner (Digital Elevation Model)"
 l81t	"hgt-Dateien mit Höhendaten"
@@ -91,6 +100,7 @@ l86	"Höhenwinkel der Lichtquelle"
 l87	"Skalierung der Grauwertgröße"
 
 b91	"Alle"
+b91t	"Alle auswählen"
 b92	"Reset"
 b92t	"Zurücksetzen auf\nDefault-Werte"
 
@@ -111,15 +121,6 @@ m99	"Ausgabe-Konsole kann jetzt geschlossen werden!"
 #   oder Name der ausführbaren QMapShack-Datei, falls über Suchpfad gefunden
 # qms_args
 #   Weitere optionale QMapShack-Argumente
-# tms_folder
-#   Ordner für QMapShack-Onlinekarten mit Endung .tms (Tile Map Service)
-#   Finde/Setze Ordner in QMapShack über "Datei -> Kartenverzeichnisse angeben"
-#   Speicherort der Datei "Mapsforge.tms". Ordner muss daher beschreibbar sein!
-# tiles_folder
-#   Hauptverzeichnis für den Kachelspeicher von QMapShack
-#   Finde/Setze Ordner in QMapShack über "Datei -> Kartenverzeichnisse angeben"
-#   QMapShack puffert die Mapsforge-Kacheln dort im Unterordner "Mapsforge"
-#   Unterordner wird nach Änderung von Mapsforge-Karte(n) oder Thema geleert
 # maps_folder
 #   Ordner wird rekursiv nach Mapsforge-Karten mit Endung .map durchsucht
 # themes_folder
@@ -134,9 +135,6 @@ m99	"Ausgabe-Konsole kann jetzt geschlossen werden!"
 #   Vollständiger Pfad des lokalen Mapsforge Tile Servers Java-Archiv (.jar)
 #   mapsforgesrv4java8.jar  ... für Java version 8 (oder höher)
 #   mapsforgesrv-fatjar.jar ... für Java version 11 oder höher
-# tcp_port
-#   TCP-Port für Kommunikation zwischen Mapsforge Tile Server und QMapShack
-#   (49152 <= Port <= 65535)
 # min_zoom_level
 #   Minimum Zoom-Stufe (Zoom-Stufe 1 = QMapShack kleinster Maßstab 10 m)
 # max_zoom_level
@@ -150,5 +148,12 @@ m99	"Ausgabe-Konsole kann jetzt geschlossen werden!"
 # language
 #   Bevorzugte Mapsforge-Kartensprache (2 Kleinbuchstaben ISO 639-1 Code)
 #   (z.B. "en", "fr", "de" etc. oder "" für Mapsforge-Defaultsprache)
+# tcp_port
+#   TCP-Port für Kommunikation zwischen Mapsforge Tile Server und QMapShack
+#   (1024 <= Port <= 65535)
+# interface
+#   Netzwerk-Interface des Mapsforge Tile Servers für eingehende Anfragen
+#   "localhost" ... Höre nur auf IPv4-Loopback-Interface & Adresse 127.0.0.1
+#   "all"       ... Höre auf alle Netwerk-Interfaces
 #
 # -- Ende der Beschreibung ----------------------------------------------------

@@ -107,6 +107,7 @@ set console.geometry ""
 set console.font.size 8
 
 set shading.onoff 0
+set shading.layer "onmap"
 set shading.algorithm "simple"
 set shading.simple.linearity 0.1
 set shading.simple.scale 0.666
@@ -114,11 +115,17 @@ set shading.diffuselight.angle 50.
 set shading.magnitude 1.
 set dem.folder ""
 
-set tcp.port $tcp_port
+set tcp_port_srv $tcp_port
+set tcp_port_ovl [incr tcp_port]
+set tcp.port_srv $tcp_port_srv
+set tcp.port_ovl $tcp_port_ovl
 set tcp.interface $interface
 set tcp.maxconn 256
 set threads.min 0
 set threads.max 8
+
+set tms_name_srv "Mapsforge Map"
+set tms_name_ovl "Mapsforge Hillshading"
 
 foreach item {global hillshading qmapshack} {
   set fd [open "$ini_folder/$item.ini" a+]
@@ -160,14 +167,20 @@ foreach {name value} {
 *Button.takeFocus 1
 *Checkbutton.anchor w
 *Checkbutton.borderWidth 0
+*Checkbutton.padX 0
+*Checkbutton.padY 0
 *Checkbutton.takeFocus 1
 *Dialog.msg.wrapLength 0
 *Dialog.dtl.wrapLength 0
 *Dialog.msg.font TkDefaultFont
 *Dialog.dtl.font TkDefaultFont
 *Label.borderWidth 1
+*Label.padX 0
 *Label.padY 0
 *Labelframe.borderWidth 0
+*Radiobutton.borderWidth 0
+*Radiobutton.padX 0
+*Radiobutton.padY 0
 *Scale.highlightThickness 1
 *Scale.showValue 0
 *Scale.takeFocus 1
@@ -276,6 +289,11 @@ if {$console == 1} {
   wm deiconify .console
 }
 
+# Mark output message
+
+proc puti {text} {puts "\[---\] $text"}
+proc putw {text} {puts "\[+++\] $text"}
+
 # Show error message procedure
 
 proc error_message {message exit_return} {
@@ -283,7 +301,7 @@ proc error_message {message exit_return} {
   eval $exit_return
 }
 
-# Check if QMapShack and/or tile server already running
+# Check if QMapShack already running
 # and check operating system
 
 if {$tcl_platform(os) == "Windows NT"} {
@@ -295,27 +313,7 @@ if {$tcl_platform(os) == "Windows NT"} {
     eval set pid [lindex $result 1]
 #   error_message [mc e01 "QMapShack" $exe $pid] exit
     set rc [messagebox -title $title -type yesno -default no -icon question \
-	-message [mc e01 "QMapShack" $exe $pid] -detail [mc e01q]]
-    if {$rc == "no"} {exit}
-    catch {exec TASKKILL /F /PID $pid}
-    after 2500
-  }
-  set jar [file tail $server_jar]
-  set fd [open |WMIC r+]
-  fconfigure $fd -translation {crlf lf} -encoding cp850
-  puts $fd "PROCESS WHERE \"Name!='WMIC.EXE' AND CommandLine LIKE \
-	 '% -jar %$jar% -p ${tcp.port} %'\" GET ProcessId /VALUE"
-  puts $fd "QUIT"
-  flush $fd
-  chan close $fd write
-  set result [regexp -all -inline {[^\r\n]+} [read $fd]]
-  set rc [catch {close $fd}]
-  if {$rc == 0} {
-    set index [lsearch -regexp -nocase $result "ProcessId="]
-    set pid [regsub ".*=" [lindex $result $index] ""]
-#   error_message [mc e01 "Mapsforge Tile Server" $jar $pid] exit
-    set rc [messagebox -title $title -type yesno -default no -icon question \
-	-message [mc e01 "Mapsforge Tile Server" $jar $pid] -detail [mc e01q]]
+	-message [mc e01 "QMapShack" $exe $pid] -detail [mc e02]]
     if {$rc == "no"} {exit}
     catch {exec TASKKILL /F /PID $pid}
   }
@@ -332,18 +330,7 @@ if {$tcl_platform(os) == "Windows NT"} {
     set pid $result
 #   error_message [mc e01 "QMapShack" $exe $pid] exit
     set rc [messagebox -title $title -type yesno -default no -icon question \
-	-message [mc e01 "QMapShack" $exe $pid] -detail [mc e01q]]
-    if {$rc == "no"} {exit}
-    catch {exec kill -SIGTERM $pid}
-    after 2500
-  }
-  set jar [file tail $server_jar]
-  set rc [catch {exec pgrep -f " -jar .*$jar.* -p ${tcp.port} "} result]
-  if {$rc == 0} {
-    set pid $result
-#   error_message [mc e01 "Mapsforge Tile Server" $jar $pid] exit
-    set rc [messagebox -title $title -type yesno -default no -icon question \
-	-message [mc e01 "Mapsforge Tile Server" $jar $pid] -detail [mc e01q]]
+	-message [mc e01 "QMapShack" $exe $pid] -detail [mc e0e02]]
     if {$rc == "no"} {exit}
     catch {exec kill -SIGTERM $pid}
   }
@@ -352,7 +339,7 @@ if {$tcl_platform(os) == "Windows NT"} {
     if {$env(LANG) == "C"} {set language "en"}
   }
 } else {
-  error_message [mc e02 $tcl_platform(os)] exit
+  error_message [mc e03 $tcl_platform(os)] exit
 }
 
 # Trying to force map application to use X11 instead of Wayland protocol
@@ -360,15 +347,45 @@ if {$tcl_platform(os) == "Windows NT"} {
 
 if {[tk windowingsystem] == "x11"} {set env(GDK_BACKEND) x11}
 
+# Get QMapShack's cache & map folder paths
+
+if {$tcl_platform(os) == "Windows NT"} {
+  foreach item {cachePath mapPath} {
+    set rc [catch {registry get \
+	{HKEY_CURRENT_USER\SOFTWARE\QLandkarte\QMapShack\Canvas} $item} \
+	value]
+    if {!$rc} {set $item $value}
+  }
+} elseif {$tcl_platform(os) == "Linux"} {
+  set rc [catch {open ~/.config/QLandkarte/QMapShack.conf r} fd]
+  if {!$rc} {
+    fconfigure $fd -encoding utf-8
+    set data [split [read $fd] "\n"]
+    close $fd
+    foreach item {cachePath mapPath} {
+      set index [lsearch -regexp $data "^$item="]
+      if {$index < 0} {continue}
+      regexp {^.*?=(.*)$} [lindex $data $index] "" $item
+    }
+    unset data
+  }
+}
+if {![info exists cachePath] || ![info exists mapPath]} {
+  error_message [mc e06] exit
+}
+set tiles_folder $cachePath
+set tms_folder [string trim [lindex [split $mapPath ,] 0]]
+unset cachePath mapPath
+
 # Check commands & folders
 
 foreach item {qms_cmd java_cmd} {
   set value [set $item]
-  if {[auto_execok $value] == ""} {error_message [mc e03 $value $item] exit}
+  if {[auto_execok $value] == ""} {error_message [mc e04 $value $item] exit}
 }
 foreach item {maps_folder themes_folder tms_folder tiles_folder} {
   set value [set $item]
-  if {![file isdirectory $value]} {error_message [mc e04 $value $item] exit}
+  if {![file isdirectory $value]} {error_message [mc e05 $value $item] exit}
 }
 
 # Get major Java version
@@ -377,13 +394,13 @@ set java_version 0
 set java_string "unknown"
 set command $java_cmd
 lappend command -version
-if {$::tcl_platform(os) == "Windows NT"} {
+if {$tcl_platform(os) == "Windows NT"} {
   set rc [catch {open "| $command 2>@1" r} fd]
-} elseif {$::tcl_platform(os) == "Linux"} {
+} elseif {$tcl_platform(os) == "Linux"} {
   set rc [catch {open "| $command 2>@ stdout" r} fd]
 }
 if {$rc} {error_message "$fd" exit}
-fconfigure $fd -buffering line -translation auto
+fconfigure $fd -buffering line
 if {[gets $fd line] != -1} {
   regsub {^.* version "(.*)".*$} $line {\1} data
   set java_string $data
@@ -395,6 +412,16 @@ if {[gets $fd line] != -1} {
 }
 close $fd
 
+# Prepend Java executable's path to PATH environment variable
+# to force same Java executable for nested Java calls
+
+set path [file dirname [file normalize {*}[auto_execok $java_cmd]]]
+if {$tcl_platform(os) == "Windows NT"} {
+  set env(PATH) "[file nativename $path]\;$env(PATH)"
+} elseif {$tcl_platform(os) == "Linux"} {
+  set env(PATH) "$path:$env(PATH)"
+}
+
 # Evaluate numeric tile server version
 # from output line containing version string " version: x.y.z"
 
@@ -404,7 +431,7 @@ set command $java_cmd
 lappend command -jar [file normalize $server_jar] -h
 set rc [catch {open "| $command" r} fd]
 if {$rc} {error_message "$fd" exit}
-fconfigure $fd -buffering line -translation auto
+fconfigure $fd -buffering line
 while {[gets $fd line] != -1} {
   if {[regsub {^.* version: ((?:[0-9]+\.){2}(?:[0-9]+){1}).*$} $line {\1} data] > 0} {
     set server_string $data
@@ -413,6 +440,9 @@ while {[gets $fd line] != -1} {
   }
 }
 catch "close $fd"
+
+if {$server_version < 1701 } \
+	{error_message [mc e07 $server_string 0.17.1] exit}
 
 # Recursively find files procedure
 
@@ -454,7 +484,7 @@ pack .title -expand 1 -fill x
 set github "https://github.com/JFritzle/Mapsforge-for-QMapShack"
 tooltip .title "$github"
 if {$tcl_platform(platform) == "windows"} {
-  set script "exec cmd.exe /C START \"\" $github"
+  set script "exec cmd.exe /C START {} $github"
 } elseif {$tcl_platform(os) == "Linux"} {
   set script "exec nohup xdg-open $github >/dev/null"
 }
@@ -554,16 +584,15 @@ pack .overlays_show_hide -in .styles -expand 1 -fill x -pady {2 0}
 
 # Show hillshading options
 
-checkbutton .shading_show_hide -text [mc c02] -state disabled \
+checkbutton .shading_show_hide -text [mc c02] \
 	-command "show_hide_toplevel_window .shading"
-if {$server_version >= 1603} {pack .shading_show_hide -expand 1 -fill x}
-tooltip .shading_show_hide [mc c02t]
+pack .shading_show_hide -expand 1 -fill x
 
 # Show visual rendering effects options
 
 checkbutton .effects_show_hide -text [mc c03] \
 	-command "show_hide_toplevel_window .effects"
-if {$server_version >= 1601} {pack .effects_show_hide -expand 1 -fill x}
+pack .effects_show_hide -expand 1 -fill x
 
 # Show server settings
 
@@ -599,6 +628,7 @@ proc show_hide_console {} {
       wm deiconify .console
       wm geometry .console +$x+$y
     }
+    if {[winfo ismapped .]} {raise . .console}
   } else {
     wm withdraw .console
   }
@@ -632,7 +662,7 @@ foreach toplevel {.overlays .shading .effects .server} {
   wm positionfrom $toplevel program
   if {[tk windowingsystem] == "x11"} {wm attributes $toplevel -type dialog}
 
-  bind $toplevel <ButtonRelease-3> "$parent invoke"
+  bind $toplevel <Double-ButtonRelease-3> "$parent invoke"
   bind $toplevel <Control-plus>  {incr_font_size +1}
   bind $toplevel <Control-minus> {incr_font_size -1}
   bind $toplevel <Control-KP_Add>      {incr_font_size +1}
@@ -668,8 +698,8 @@ proc position_toplevel_window {toplevel} {
   } elseif {[tk windowingsystem] == "x11"} {
     set bdwidth 2
     if {[auto_execok xwininfo] == ""} {
-      puts "Please install program 'xwininfo' by Linux package manager"
-      puts "to evaluate exact window border width."
+      putw "Please install program 'xwininfo' by Linux package manager"
+      putw "to evaluate exact window border width."
     } elseif {![catch "exec bash -c \"export LANG=C;xwininfo -id [wm frame .] \
 	| grep Width | cut -d: -f2\"" wmwidth]} {
       set bdwidth [expr ($wmwidth-$width)/2]
@@ -693,6 +723,438 @@ proc position_toplevel_window {toplevel} {
   wm geometry $toplevel +$x+$y
 }
 
+# --- Begin of hillshading
+
+# Enable/disable hillshading
+
+checkbutton .shading.onoff -text [mc c80] -variable shading.onoff -width 30
+pack .shading.onoff -expand 1 -fill x
+
+# Hillshading on map or as separate transparent overlay map
+
+radiobutton .shading.onmap -text [mc c81] -state disabled \
+	-variable shading.layer -value onmap
+tooltip .shading.onmap [mc c81t]
+radiobutton .shading.asmap -text [mc c82] \
+	-variable shading.layer -value asmap
+tooltip .shading.asmap [mc c82t]
+pack .shading.onmap .shading.asmap -anchor w
+if {$server_version < 1702} {
+  .shading.asmap configure -state disabled
+  set shading.layer "onmap"
+}
+
+# Choose DEM folder with HGT files
+
+if {[file isdirectory ${dem.folder}]} {
+  set dem.folder [file normalize ${dem.folder}]
+} else {
+  set dem.folder ""
+}
+labelframe .shading.dem_folder -labelanchor nw -text [mc l81]:
+tooltip .shading.dem_folder [mc l81t]
+pack .shading.dem_folder -fill x -expand 1 -pady 1
+entry .shading.dem_folder_value -textvariable dem.folder \
+	-relief sunken -bd 1 -takefocus 0 -state readonly
+tooltip .shading.dem_folder_value [mc l81t]
+button .shading.dem_folder_button -image $arrow_down -command choose_dem_folder
+pack .shading.dem_folder_button -in .shading.dem_folder \
+	-side right -fill y -padx {3 0}
+pack .shading.dem_folder_value -in .shading.dem_folder \
+	-side left -fill x -expand 1
+
+proc choose_dem_folder {} {
+  set folder [tk_chooseDirectory -parent . -initialdir ${::dem.folder} \
+	-mustexist 1 -title "$::title - [mc l82]"]
+  if {$folder != "" && [file isdirectory $folder]} {set ::dem.folder $folder}
+}
+
+# Hillshading algorithm
+
+labelframe .shading.algorithm -labelanchor w -text [mc l83]:
+pack .shading.algorithm -expand 1 -fill x -pady 2
+combobox .shading.algorithm_values -width 12 \
+	-validate key -validatecommand {return 0} \
+	-textvariable shading.algorithm -values {"simple" "diffuselight"}
+if {[.shading.algorithm_values current] < 0} \
+	{.shading.algorithm_values current 0}
+pack .shading.algorithm_values -in .shading.algorithm \
+	-side right -anchor e -expand 1
+
+# Hillshading algorithm parameters
+
+labelframe .shading.simple -labelanchor w -text [mc l84]:
+entry .shading.simple_value1 -textvariable shading.simple.linearity \
+	-width 8 -justify right
+set .shading.simple_value1.minmax {0 1 0.1}
+tooltip .shading.simple_value1 "0 \u2264 [mc l84] \u2264 1"
+label .shading.simple_label2 -text [mc l85]:
+entry .shading.simple_value2 -textvariable shading.simple.scale \
+	-width 8 -justify right
+set .shading.simple_value2.minmax {0 10 0.666}
+tooltip .shading.simple_value2 "0 \u2264 [mc l85] \u2264 10"
+pack .shading.simple_value1 .shading.simple_label2 .shading.simple_value2 \
+	-in .shading.simple -side left -anchor w -expand 1 -fill x -padx {5 0}
+
+labelframe .shading.diffuselight -labelanchor w -text [mc l86]:
+entry .shading.diffuselight_value -textvariable shading.diffuselight.angle \
+	-width 8 -justify right
+set .shading.diffuselight_value.minmax {0 90 50.}
+tooltip .shading.diffuselight_value "0 \u2264 [mc l85] \u2264 90"
+pack .shading.diffuselight_value -in .shading.diffuselight \
+	-side right -anchor e -expand 1
+
+proc switch_shading_algorithm {} {
+  catch "pack forget .shading.simple .shading.diffuselight"
+  pack .shading.${::shading.algorithm} -after .shading.algorithm \
+	-expand 1 -fill x -pady 1
+}
+
+bind .shading.algorithm_values <<ComboboxSelected>> switch_shading_algorithm
+switch_shading_algorithm
+
+# Hillshading magnitude
+
+labelframe .shading.magnitude -labelanchor w -text [mc l87]:
+pack .shading.magnitude -expand 1 -fill x
+entry .shading.magnitude_value -textvariable shading.magnitude \
+	-width 8 -justify right
+set .shading.magnitude_value.minmax {0 4 1.}
+tooltip .shading.magnitude_value "0 \u2264 [mc l87] \u2264 4"
+pack .shading.magnitude_value -in .shading.magnitude -anchor e -expand 1
+
+# Reset hillshading algorithm parameters
+
+button .shading.reset -text [mc b92] -width 8 -takefocus 0 \
+	-highlightthickness 0 -command "reset_shading_values"
+tooltip .shading.reset [mc b92t]
+pack .shading.reset -pady {2 0}
+
+proc reset_shading_values {} {
+  foreach widget {.shading.simple_value1 .shading.simple_value2 \
+	          .shading.diffuselight_value .shading.magnitude_value} {
+    $widget delete 0 end
+    $widget insert 0 [lindex [set ::$widget.minmax] 2]
+  }
+}
+
+# Validate hillshading algorithm parameters
+
+proc validate_float_minmax {widget} {
+  set value [$widget get]
+  if {[regexp {^(\d+\.?\d*|\d*\.?\d+)$} $value]} {
+    set valid 1
+    lassign [set ::$widget.minmax] min max
+    if {$min != "" && [expr $value < $min]} {set valid 0}
+    if {$max != "" && [expr $value > $max]} {set valid 0}
+  } else {
+    set valid 0
+  }
+  if {!$valid} {set value [set ::$widget.previous]}
+  $widget delete 0 end
+  $widget insert 0 $value
+}
+
+proc validate_float_unsigned {value} {
+  if {$value == "" || $value == "."} {return 1}
+  return [regexp {^(\d+\.?\d*|\d*\.?\d+)$} $value]
+}
+
+foreach widget {.shading.simple_value1 .shading.simple_value2 \
+	        .shading.diffuselight_value .shading.magnitude_value} {
+  $widget configure -validate key -vcmd "validate_float_unsigned %P"
+  bind $widget <Enter> {set ::%W.previous [%W get]}
+  bind $widget <Leave> {after idle "validate_float_minmax %W"}
+  bind $widget <FocusIn>  {set ::%W.previous [%W get]}
+  bind $widget <FocusOut> {after idle "validate_float_minmax %W"}
+  bind $widget <Shift-ButtonRelease-1> \
+	{%W delete 0 end;%W insert 0 [lindex ${::%W.minmax} 2]}
+}
+
+# Save hillshading settings to folder ini_folder
+
+proc save_shading_settings {} {
+uplevel #0 {
+  set fd [open "$ini_folder/hillshading.ini" w]
+  fconfigure $fd -buffering full
+  foreach name {shading.onoff shading.algorithm \
+	shading.simple.linearity shading.simple.scale \
+	shading.diffuselight.angle shading.magnitude dem.folder} {
+    puts $fd "$name=[set $name]"
+  }
+  close $fd
+}}
+
+# --- End of hillshading
+# --- Begin of visual rendering effects
+
+# Scaling
+
+label .effects.scaling -text [mc s01]
+
+label .effects.user_label -text [mc s02]: -anchor w
+scale .effects.user_scale -from 0.05 -to 2.50 -resolution 0.05 \
+	-orient horizontal -variable user.scale
+bind .effects.user_scale <Shift-ButtonRelease-1> "set user.scale 1.00"
+label .effects.user_value -textvariable user.scale -width 4 \
+	-relief sunken -anchor center
+
+label .effects.text_label -text [mc s03]: -anchor w
+scale .effects.text_scale -from 0.05 -to 2.50 -resolution 0.05 \
+	-orient horizontal -variable text.scale
+bind .effects.text_scale <Shift-ButtonRelease-1> "set text.scale 1.00"
+label .effects.text_value -textvariable text.scale -width 4 \
+	-relief sunken -anchor center
+
+label .effects.symbol_label -text [mc s04]: -anchor w
+scale .effects.symbol_scale -from 0.05 -to 2.50 -resolution 0.05 \
+	-orient horizontal -variable symbol.scale
+bind .effects.symbol_scale <Shift-ButtonRelease-1> "set symbol.scale 1.00"
+label .effects.symbol_value -textvariable symbol.scale -width 4 \
+	-relief sunken -anchor center
+
+set row 0
+grid .effects.scaling -row $row -column 1 -columnspan 3 -sticky we
+foreach item {user text symbol} {
+  incr row
+  grid .effects.${item}_label -row $row -column 1 -sticky w -padx {0 2}
+  grid .effects.${item}_scale -row $row -column 2 -sticky we
+  grid .effects.${item}_value -row $row -column 3 -sticky e
+}
+
+# Gamma correction & Contrast-stretching
+
+label .effects.color -text [mc s06]
+
+label .effects.gamma_label -text [mc s07]: -anchor w
+scale .effects.gamma_scale -from 0.01 -to 4.99 -resolution 0.01 \
+	-orient horizontal -variable maps.gamma
+bind .effects.gamma_scale <Shift-ButtonRelease-1> "set maps.gamma 1.00"
+label .effects.gamma_value -textvariable maps.gamma -width 4 \
+	-relief sunken -anchor center
+
+label .effects.contrast_label -text [mc s08]: -anchor w
+scale .effects.contrast_scale -from 0 -to 254 -resolution 1 \
+	-orient horizontal -variable maps.contrast
+bind .effects.contrast_scale <Shift-ButtonRelease-1> "set maps.contrast 0"
+label .effects.contrast_value -textvariable maps.contrast -width 4 \
+	-relief sunken -anchor center
+
+set row 10
+grid .effects.color -row $row -column 1 -columnspan 3 -sticky we
+foreach item {gamma contrast} {
+  incr row
+  grid .effects.${item}_label -row $row -column 1 -sticky w -padx {0 2}
+  grid .effects.${item}_scale -row $row -column 2 -sticky we
+  grid .effects.${item}_value -row $row -column 3 -sticky e
+}
+
+grid columnconfigure .effects {1 2} -uniform 1
+
+# Reset visual rendering effects
+
+button .effects.reset -text [mc b92] -width 8 -takefocus 0 \
+	-highlightthickness 0 -command "reset_effects_values"
+tooltip .effects.reset [mc b92t]
+grid .effects.reset -row 99 -column 1 -columnspan 3 -pady {2 0}
+
+proc reset_effects_values {} {
+  foreach item {user.scale text.scale symbol.scale maps.gamma} \
+	{set ::$item 1.00}
+  set ::maps.contrast 0
+}
+
+# --- End of visual rendering effects
+# --- Begin of server settings
+
+# Server information
+
+label .server.info -text [mc x01]
+pack .server.info
+
+# Java runtime version
+
+labelframe .server.jre_version -labelanchor w -text [mc x02]:
+pack .server.jre_version -expand 1 -fill x -pady 1
+label .server.jre_version_value -anchor e -textvariable java_string
+pack .server.jre_version_value -in .server.jre_version \
+	-side right -anchor e -expand 1
+
+# Mapsforge server version
+
+labelframe .server.version -labelanchor w -text [mc x03]:
+pack .server.version -expand 1 -fill x -pady 1
+label .server.version_value -anchor e -textvariable server_string
+pack .server.version_value -in .server.version \
+	-side right -anchor e -expand 1
+
+# Mapsforge server version jar archive
+
+labelframe .server.jar -labelanchor nw -text [mc x04]:
+pack .server.jar -expand 1 -fill x -pady 1
+entry .server.jar_value -textvariable server_jar \
+	-relief sunken -bd 1 -takefocus 0 -state readonly
+pack .server.jar_value -in .server.jar -expand 1 -fill x
+
+# Server configuration
+
+label .server.config -text [mc x11]
+pack .server.config -pady {10 5}
+
+# Rendering engine
+
+if {$java_version <= 8} {
+  set pattern marlin-*-Unsafe
+} elseif {$java_version <= 10} {
+  set pattern marlin-*-Unsafe-OpenJDK9
+} else {
+  set pattern marlin-*-Unsafe-OpenJDK11
+}
+set engines [glob -nocomplain -tails -type f \
+  -directory [file dirname $server_jar] $pattern.jar]
+lappend engines "(default)"
+set engines [lsort -dictionary $engines]
+
+set width 0
+foreach item $engines \
+  {set width [expr max([font measure TkTextFont $item],$width)]}
+set width [expr $width/[font measure TkTextFont "0"]+1]
+
+labelframe .server.engine -labelanchor nw -text [mc x12]:
+combobox .server.engine_values -width $width \
+	-validate key -validatecommand {return 0} \
+	-textvariable rendering.engine -values $engines
+if {[.server.engine_values current] < 0} \
+	{.server.engine_values current 0}
+if {[llength $engines] > 1} {
+  pack .server.engine -expand 1 -fill x -pady 1
+  pack .server.engine_values -in .server.engine \
+	-anchor e -expand 1 -fill x
+}
+
+# Server interface
+
+labelframe .server.interface -labelanchor w -text [mc x13]:
+combobox .server.interface_values -width 10 \
+	-textvariable tcp.interface -values {"localhost" "all"}
+if {[.server.interface_values current] < 0} \
+	{.server.interface_values current 0}
+pack .server.interface -expand 1 -fill x -pady {6 1}
+pack .server.interface_values -in .server.interface \
+	-side right -anchor e -expand 1 -padx {3 0}
+
+# Tile server TCP port number
+
+labelframe .server.port_srv -labelanchor w -text [mc x15]:
+entry .server.port_srv_value -textvariable tcp.port_srv \
+	-width 6 -justify center
+set .server.port_srv_value.minmax "1024 65535 $tcp_port_srv"
+tooltip .server.port_srv_value "1024 \u2264 [mc x15] \u2264 65535"
+pack .server.port_srv -expand 1 -fill x -pady 1
+pack .server.port_srv_value -in .server.port_srv \
+	-side right -anchor e -expand 1 -padx {3 0}
+
+# Overlay server TCP port number
+
+labelframe .server.port_ovl -labelanchor w -text "[mc x15] ([mc c82]):"
+tooltip .server.port_ovl [mc c82t]
+entry .server.port_ovl_value -textvariable tcp.port_ovl \
+	-width 6 -justify center
+set .server.port_ovl_value.minmax "1024 65535 $tcp_port_ovl"
+tooltip .server.port_ovl_value "1024 \u2264 [mc x15] \u2264 65535"
+if {$server_version >= 1702} {
+  pack .server.port_ovl -expand 1 -fill x -pady 1
+  pack .server.port_ovl_value -in .server.port_ovl \
+	-side right -anchor e -expand 1 -padx {3 0}
+}
+
+# Maximum size of TCP listening queue
+
+labelframe .server.maxconn -labelanchor w -text [mc x16]:
+entry .server.maxconn_value -textvariable tcp.maxconn \
+	-width 6 -justify center
+set .server.maxconn_value.minmax {0 {} 256}
+tooltip .server.maxconn_value "[mc x16] \u2265 0"
+pack .server.maxconn -expand 1 -fill x -pady 1
+pack .server.maxconn_value -in .server.maxconn \
+	-side right -anchor e -expand 1 -padx {3 0}
+
+
+# Minimum number of concurrent threads
+
+labelframe .server.threadsmin -labelanchor w -text [mc x17]:
+entry .server.threadsmin_value -textvariable threads.min \
+	-width 6 -justify center
+set .server.threadsmin_value.minmax {0 {} 0}
+tooltip .server.threadsmin_value "[mc x17] \u2265 0"
+pack .server.threadsmin -expand 1 -fill x -pady {6 1}
+pack .server.threadsmin_value -in .server.threadsmin \
+	-side right -anchor e -expand 1 -padx {3 0}
+
+# Maximum number of concurrent threads
+
+labelframe .server.threadsmax -labelanchor w -text [mc x18]:
+entry .server.threadsmax_value -textvariable threads.max \
+	-width 6 -justify center
+set .server.threadsmax_value.minmax {4 {} 8}
+tooltip .server.threadsmax_value "[mc x18] \u2265 4"
+pack .server.threadsmax -expand 1 -fill x -pady 1
+pack .server.threadsmax_value -in .server.threadsmax \
+	-side right -anchor e -expand 1 -padx {3 0}
+
+# Reset server configuration
+
+button .server.reset -text [mc b92] -width 8 -takefocus 0 \
+	-highlightthickness 0 -command "reset_server_values"
+tooltip .server.reset [mc b92t]
+pack .server.reset -pady {2 0}
+
+proc reset_server_values {} {
+  foreach widget {.server.port_srv_value .server.port_ovl_value \
+	.server.maxconn_value \
+	.server.threadsmin_value .server.threadsmax_value} {
+    $widget delete 0 end
+    $widget insert 0 [lindex [set ::$widget.minmax] 2]
+  }
+  .server.engine_values current 0
+  .server.interface_values set $::interface
+}
+
+# Validate server settings
+
+proc validate_number_minmax {widget} {
+  set value [$widget get]
+  if {[regexp {^(\d+)$} $value]} {
+    set valid 1
+    lassign [set ::$widget.minmax] min max
+    if {$min != "" && [expr $value < $min]} {set valid 0}
+    if {$max != "" && [expr $value > $max]} {set valid 0}
+  } else {
+    set valid 0
+  }
+  if {!$valid} {set value [set ::$widget.previous]}
+  $widget delete 0 end
+  $widget insert 0 $value
+}
+
+proc validate_number_unsigned {value} {
+  if {$value == ""} {return 1}
+  return [regexp {^(\d+)$} $value]
+}
+
+foreach widget {.server.port_srv_value .server.port_ovl_value \
+	.server.maxconn_value \
+	.server.threadsmin_value .server.threadsmax_value} {
+  $widget configure -validate key -vcmd "validate_number_unsigned %P"
+  bind $widget <Enter> {set ::%W.previous [%W get]}
+  bind $widget <Leave> {after idle "validate_number_minmax %W"}
+  bind $widget <FocusIn>  {set ::%W.previous [%W get]}
+  bind $widget <FocusOut> {after idle "validate_number_minmax %W"}
+  bind $widget <Shift-ButtonRelease-1> \
+	{%W delete 0 end;%W insert 0 [lindex ${::%W.minmax} 2]}
+}
+
+# --- End of server settings
 # --- Begin of theme file processing
 
 # Get list of attributes from given xml element
@@ -752,7 +1214,7 @@ proc setup_styles_overlays_structure {} {
   if {$theme == "(default)"} {
     unset -nocomplain ::style.table ::style.theme
     if {[winfo ismapped .overlays]} {.overlays_show_hide invoke}
-    .shading_show_hide configure -state normal
+    .shading.onmap configure -state normal
     update idletasks
     return
   }
@@ -761,7 +1223,7 @@ proc setup_styles_overlays_structure {} {
   set ::style.theme $theme
   set theme_file "$::themes_folder/$theme"
   set fd [open $theme_file r]
-  fconfigure $fd -translation binary -encoding utf-8
+  fconfigure $fd -encoding utf-8
   set data [read $fd]
   close $fd
 
@@ -783,11 +1245,10 @@ proc setup_styles_overlays_structure {} {
   # Search for hillshading element
   if {[lsearch -regexp $elements {<hillshading\s+.*?>}] == -1} {
     # Hillshading element not found: disable hillshading configuration
-    if {[winfo ismapped .shading]} {.shading_show_hide invoke}
-    .shading_show_hide configure -state disabled
+    .shading.onmap configure -state disabled
   } else {
     # Hillshading element found: enable hillshading configuration
-    .shading_show_hide configure -state normal
+    .shading.onmap configure -state normal
   }
 
   # Search for stylemenu element
@@ -849,7 +1310,7 @@ proc setup_styles_overlays_structure {} {
     foreach index $indices {
       array unset overlay
       array set overlay \
-	     [get_element_attributes "overlay" [lindex $layer_data $index]]
+	[get_element_attributes "overlay" [lindex $layer_data $index]]
       lappend layer(overlays) $overlay(id)
     }
 
@@ -942,6 +1403,7 @@ proc setup_styles_overlays_structure {} {
     pack $parent.frame -expand 1
     button $parent.frame.all -text [mc b91] -width 8 -takefocus 0 \
 	   -highlightthickness 0 -command "all_style_overlays $parent"
+    tooltip $parent.frame.all [mc b91t]
     button $parent.frame.reset -text [mc b92] -width 8 -takefocus 0 \
 	   -highlightthickness 0 -command "reset_style_overlays $parent"
     tooltip $parent.frame.reset [mc b92t]
@@ -1058,426 +1520,6 @@ bind .themes_values <<ComboboxSelected>> setup_styles_overlays_structure
 event generate .themes_values <<ComboboxSelected>>
 
 # --- End of theme file processing
-# --- Begin of hillshading
-
-# Enable/disable hillshading
-
-checkbutton .shading.onoff -text [mc c80] -variable shading.onoff -width 30
-pack .shading.onoff -expand 1 -fill x
-
-# Choose DEM folder with HGT files
-
-if {[file isdirectory ${dem.folder}]} {
-  set dem.folder [file normalize ${dem.folder}]
-} else {
-  set dem.folder ""
-}
-labelframe .shading.dem_folder -labelanchor nw -text [mc l81]:
-tooltip .shading.dem_folder [mc l81t]
-pack .shading.dem_folder -fill x -expand 1 -pady 1
-entry .shading.dem_folder_value -textvariable dem.folder \
-	-relief sunken -bd 1 -takefocus 0 -state readonly
-tooltip .shading.dem_folder_value [mc l81t]
-button .shading.dem_folder_button -image $arrow_down -command choose_dem_folder
-pack .shading.dem_folder_button -in .shading.dem_folder \
-	-side right -fill y -padx {3 0}
-pack .shading.dem_folder_value -in .shading.dem_folder \
-	-side left -fill x -expand 1
-
-proc choose_dem_folder {} {
-  set folder [tk_chooseDirectory -parent . -initialdir ${::dem.folder} \
-	-mustexist 1 -title "$::title - [mc l82]"]
-  if {$folder != "" && [file isdirectory $folder]} {set ::dem.folder $folder}
-}
-
-# Hillshading algorithm
-
-labelframe .shading.algorithm -labelanchor w -text [mc l83]:
-pack .shading.algorithm -expand 1 -fill x -pady 2
-combobox .shading.algorithm_values -width 12 \
-	-validate key -validatecommand {return 0} \
-	-textvariable shading.algorithm -values {"simple" "diffuselight"}
-if {[.shading.algorithm_values current] < 0} \
-	{.shading.algorithm_values current 0}
-pack .shading.algorithm_values -in .shading.algorithm \
-	-side right -anchor e -expand 1
-
-# Hillshading algorithm parameters
-
-labelframe .shading.simple -labelanchor w -text [mc l84]:
-entry .shading.simple_value1 -textvariable shading.simple.linearity \
-	-width 8 -justify right
-set .shading.simple_value1.minmax {0 1 0.1}
-tooltip .shading.simple_value1 "0 \u2264 [mc l84] \u2264 1"
-label .shading.simple_label2 -text [mc l85]:
-entry .shading.simple_value2 -textvariable shading.simple.scale \
-	-width 8 -justify right
-set .shading.simple_value2.minmax {0 10 0.666}
-tooltip .shading.simple_value2 "0 \u2264 [mc l85] \u2264 10"
-pack .shading.simple_value1 .shading.simple_label2 .shading.simple_value2 \
-	-in .shading.simple -side left -anchor w -expand 1 -fill x -padx {5 0}
-
-labelframe .shading.diffuselight -labelanchor w -text [mc l86]:
-entry .shading.diffuselight_value -textvariable shading.diffuselight.angle \
-	-width 8 -justify right
-set .shading.diffuselight_value.minmax {0 90 50.}
-tooltip .shading.diffuselight_value "0 \u2264 [mc l85] \u2264 90"
-pack .shading.diffuselight_value -in .shading.diffuselight \
-	-side right -anchor e -expand 1
-
-proc switch_shading_algorithm {} {
-  catch "pack forget .shading.simple .shading.diffuselight"
-  pack .shading.${::shading.algorithm} -after .shading.algorithm \
-	-expand 1 -fill x -pady 1
-}
-
-bind .shading.algorithm_values <<ComboboxSelected>> switch_shading_algorithm
-switch_shading_algorithm
-
-# Hillshading magnitude
-
-labelframe .shading.magnitude -labelanchor w -text [mc l87]:
-pack .shading.magnitude -expand 1 -fill x
-entry .shading.magnitude_value -textvariable shading.magnitude \
-	-width 8 -justify right
-set .shading.magnitude_value.minmax {0 {} 1.}
-tooltip .shading.magnitude_value "[mc l87] \u2265 0"
-pack .shading.magnitude_value -in .shading.magnitude -anchor e -expand 1
-
-# Reset hillshading algorithm parameters
-
-button .shading.reset -text [mc b92] -width 8 -takefocus 0 \
-	-highlightthickness 0 -command "reset_shading_values"
-tooltip .shading.reset [mc b92t]
-pack .shading.reset -pady {2 0}
-
-proc reset_shading_values {} {
-  foreach widget {.shading.simple_value1 .shading.simple_value2 \
-	          .shading.diffuselight_value .shading.magnitude_value} {
-    $widget delete 0 end
-    $widget insert 0 [lindex [set ::$widget.minmax] 2]
-  }
-}
-
-# Validate hillshading algorithm parameters
-
-proc validate_float_minmax {widget} {
-  set value [$widget get]
-  if {[regexp {^(\d+\.?\d*|\d*\.?\d+)$} $value]} {
-    set valid 1
-    lassign [set ::$widget.minmax] min max
-    if {$min != "" && [expr $value < $min]} {set valid 0}
-    if {$max != "" && [expr $value > $max]} {set valid 0}
-  } else {
-    set valid 0
-  }
-  if {!$valid} {set value [set ::$widget.previous]}
-  $widget delete 0 end
-  $widget insert 0 $value
-}
-
-proc validate_float_unsigned {value} {
-  if {$value == "" || $value == "."} {return 1}
-  return [regexp {^(\d+\.?\d*|\d*\.?\d+)$} $value]
-}
-
-foreach widget {.shading.simple_value1 .shading.simple_value2 \
-	        .shading.diffuselight_value .shading.magnitude_value} {
-  $widget configure -validate key -vcmd "validate_float_unsigned %P"
-  bind $widget <Enter> {set ::%W.previous [%W get]}
-  bind $widget <Leave> {after idle "validate_float_minmax %W"}
-  bind $widget <FocusIn>  {set ::%W.previous [%W get]}
-  bind $widget <FocusOut> {after idle "validate_float_minmax %W"}
-  bind $widget <Shift-ButtonRelease-1> \
-	{%W delete 0 end;%W insert 0 [lindex ${::%W.minmax} 2]}
-}
-
-# Save hillshading settings to folder ini_folder
-
-proc save_shading_settings {} {
-uplevel #0 {
-  set fd [open "$ini_folder/hillshading.ini" w]
-  fconfigure $fd -buffering full
-  foreach name {shading.onoff shading.algorithm \
-	shading.simple.linearity shading.simple.scale \
-	shading.diffuselight.angle shading.magnitude dem.folder} {
-    puts $fd "$name=[set $name]"
-  }
-  close $fd
-}}
-
-# --- End of hillshading
-# --- Begin of visual rendering effects
-
-# Scaling
-
-label .effects.scaling -text [mc s01]
-grid .effects.scaling -row 0 -column 1 -columnspan 3 -sticky we
-
-label .effects.user_label -text [mc s02]: -anchor w -padx 0
-scale .effects.user_scale -from 0.05 -to 2.50 -resolution 0.05 \
-	-orient horizontal -variable user.scale
-bind .effects.user_scale <Shift-ButtonRelease-1> "set user.scale 1.00"
-label .effects.user_value -textvariable user.scale -width 4 \
-	-relief sunken -anchor center
-
-if {$server_version >= 1701} {
-  grid .effects.user_label -row 1 -column 1 -sticky w -padx {0 2}
-  grid .effects.user_scale -row 1 -column 2 -sticky we
-  grid .effects.user_value -row 1 -column 3 -sticky e
-}
-
-label .effects.text_label -text [mc s03]: -anchor w -padx 0
-scale .effects.text_scale -from 0.05 -to 2.50 -resolution 0.05 \
-	-orient horizontal -variable text.scale
-bind .effects.text_scale <Shift-ButtonRelease-1> "set text.scale 1.00"
-label .effects.text_value -textvariable text.scale -width 4 \
-	-relief sunken -anchor center
-
-grid .effects.text_label -row 2 -column 1 -sticky w -padx {0 2}
-grid .effects.text_scale -row 2 -column 2 -sticky we
-grid .effects.text_value -row 2 -column 3 -sticky e
-
-label .effects.symbol_label -text [mc s04]: -anchor w -padx 0
-scale .effects.symbol_scale -from 0.05 -to 2.50 -resolution 0.05 \
-	-orient horizontal -variable symbol.scale
-bind .effects.symbol_scale <Shift-ButtonRelease-1> "set symbol.scale 1.00"
-label .effects.symbol_value -textvariable symbol.scale -width 4 \
-	-relief sunken -anchor center
-
-if {$server_version >= 1701} {
-  grid .effects.symbol_label -row 3 -column 1 -sticky w -padx {0 2}
-  grid .effects.symbol_scale -row 3 -column 2 -sticky we
-  grid .effects.symbol_value -row 3 -column 3 -sticky e
-}
-
-# Gamma correction & Contrast-stretching
-
-label .effects.color -text [mc s06]
-grid .effects.color -row 10 -column 1 -columnspan 3 -sticky we
-
-label .effects.gamma_label -text [mc s07]: -anchor w -padx 0
-scale .effects.gamma_scale -from 0.01 -to 4.99 -resolution 0.01 \
-	-orient horizontal -variable maps.gamma
-bind .effects.gamma_scale <Shift-ButtonRelease-1> "set maps.gamma 1.00"
-label .effects.gamma_value -textvariable maps.gamma -width 4 \
-	-relief sunken -anchor center
-
-if {$server_version >= 1604} {
-  grid .effects.gamma_label -row 11 -column 1 -sticky w -padx {0 2}
-  grid .effects.gamma_scale -row 11 -column 2 -sticky we
-  grid .effects.gamma_value -row 11 -column 3 -sticky e
-}
-
-label .effects.contrast_label -text [mc s08]: -anchor w -padx 0
-scale .effects.contrast_scale -from 0 -to 254 -resolution 1 \
-	-orient horizontal -variable maps.contrast
-bind .effects.contrast_scale <Shift-ButtonRelease-1> "set maps.contrast 0"
-label .effects.contrast_value -textvariable maps.contrast -width 4 \
-	-relief sunken -anchor center
-
-if {$server_version >= 1601} {
-  grid .effects.contrast_label -row 12 -column 1 -sticky w -padx {0 2}
-  grid .effects.contrast_scale -row 12 -column 2 -sticky we
-  grid .effects.contrast_value -row 12 -column 3 -sticky e
-}
-
-grid columnconfigure .effects {1 2} -uniform 1
-
-# Reset visual rendering effects
-
-button .effects.reset -text [mc b92] -width 8 -takefocus 0 \
-	-highlightthickness 0 -command "reset_effects_values"
-tooltip .effects.reset [mc b92t]
-grid .effects.reset -row 99 -column 1 -columnspan 3 -pady {2 0}
-
-proc reset_effects_values {} {
-  foreach item {user.scale text.scale symbol.scale maps.gamma} \
-	{set ::$item 1.00}
-  set ::maps.contrast 0
-}
-
-# --- End of visual rendering effects
-# --- Begin of server settings
-
-# Server information
-
-label .server.info -text [mc x01]
-pack .server.info
-
-# Java runtime version
-
-labelframe .server.jre_version -labelanchor w -text [mc x02]:
-pack .server.jre_version -expand 1 -fill x -pady 1
-label .server.jre_version_value -anchor e -textvariable java_string
-pack .server.jre_version_value -in .server.jre_version \
-	-side right -anchor e -expand 1
-
-# Mapsforge server version
-
-labelframe .server.version -labelanchor w -text [mc x03]:
-pack .server.version -expand 1 -fill x -pady 1
-label .server.version_value -anchor e -textvariable server_string
-pack .server.version_value -in .server.version \
-	-side right -anchor e -expand 1
-
-# Mapsforge server version jar archive
-
-labelframe .server.jar -labelanchor nw -text [mc x04]:
-pack .server.jar -expand 1 -fill x -pady 1
-entry .server.jar_value -textvariable server_jar \
-	-relief sunken -bd 1 -takefocus 0 -state readonly
-pack .server.jar_value -in .server.jar -expand 1 -fill x
-
-# Server configuration
-
-label .server.config -text [mc x11]
-pack .server.config -pady {10 5}
-
-# Rendering engine
-
-if {$java_version <= 8} {
-  set pattern marlin-*-Unsafe
-} elseif {$java_version <= 10} {
-  set pattern marlin-*-Unsafe-OpenJDK9
-} else {
-  set pattern marlin-*-Unsafe-OpenJDK11
-}
-set engines [glob -nocomplain -tails -type f \
-  -directory [file dirname $server_jar] $pattern.jar]
-lappend engines "(default)"
-set engines [lsort -dictionary $engines]
-
-set width 0
-foreach item $engines \
-  {set width [expr max([font measure TkTextFont $item],$width)]}
-set width [expr $width/[font measure TkTextFont "0"]+1]
-
-labelframe .server.engine -labelanchor nw -text [mc x12]:
-combobox .server.engine_values -width $width \
-	-validate key -validatecommand {return 0} \
-	-textvariable rendering.engine -values $engines
-if {[.server.engine_values current] < 0} \
-	{.server.engine_values current 0}
-if {$server_version >= 1700 && [llength $engines] > 1} {
-  pack .server.engine -expand 1 -fill x -pady 1
-  pack .server.engine_values -in .server.engine \
-	-anchor e -expand 1 -fill x
-}
-
-# Server interface
-
-labelframe .server.interface -labelanchor w -text [mc x13]:
-combobox .server.interface_values -width 10 \
-	-validate key -validatecommand {return 0} \
-	-textvariable tcp.interface -values {"localhost" "all"}
-if {[.server.interface_values current] < 0} \
-	{.server.interface_values current 0}
-pack .server.interface -expand 1 -fill x -pady {6 1}
-pack .server.interface_values -in .server.interface \
-	-side right -anchor e -expand 1 -padx {3 0}
-
-# Server tcp port number
-
-labelframe .server.port -labelanchor w -text [mc x14]:
-entry .server.port_value -textvariable tcp.port \
-	-width 6 -justify center
-set .server.port_value.minmax "1024 65535 $tcp_port"
-tooltip .server.port_value "1024 \u2264 [mc x14] \u2264 65535"
-pack .server.port -expand 1 -fill x -pady 1
-pack .server.port_value -in .server.port \
-	-side right -anchor e -expand 1 -padx {3 0}
-
-# Maximum size of TCP listening queue
-
-labelframe .server.maxconn -labelanchor w -text [mc x15]:
-entry .server.maxconn_value -textvariable tcp.maxconn \
-	-width 6 -justify center
-set .server.maxconn_value.minmax {0 {} 256}
-tooltip .server.maxconn_value "[mc x15] \u2265 0"
-if {$server_version >= 1700} {
-  pack .server.maxconn -expand 1 -fill x -pady 1
-  pack .server.maxconn_value -in .server.maxconn \
-	-side right -anchor e -expand 1 -padx {3 0}
-}
-
-# Minimum number of concurrent threads
-
-labelframe .server.threadsmin -labelanchor w -text [mc x16]:
-entry .server.threadsmin_value -textvariable threads.min \
-	-width 6 -justify center
-set .server.threadsmin_value.minmax {0 {} 0}
-tooltip .server.threadsmin_value "[mc x16] \u2265 0"
-if {$server_version >= 1700} {
-  pack .server.threadsmin -expand 1 -fill x -pady {6 1}
-  pack .server.threadsmin_value -in .server.threadsmin \
-	-side right -anchor e -expand 1 -padx {3 0}
-}
-
-# Maximum number of concurrent threads
-
-labelframe .server.threadsmax -labelanchor w -text [mc x17]:
-entry .server.threadsmax_value -textvariable threads.max \
-	-width 6 -justify center
-set .server.threadsmax_value.minmax {4 {} 8}
-tooltip .server.threadsmax_value "[mc x17] \u2265 4"
-if {$server_version >= 1700} {
-  pack .server.threadsmax -expand 1 -fill x -pady 1
-  pack .server.threadsmax_value -in .server.threadsmax \
-	-side right -anchor e -expand 1 -padx {3 0}
-}
-
-# Reset server configuration
-
-button .server.reset -text [mc b92] -width 8 -takefocus 0 \
-	-highlightthickness 0 -command "reset_server_values"
-tooltip .server.reset [mc b92t]
-pack .server.reset -pady {2 0}
-
-proc reset_server_values {} {
-  foreach widget {.server.port_value .server.maxconn_value \
-	        .server.threadsmin_value .server.threadsmax_value} {
-    $widget delete 0 end
-    $widget insert 0 [lindex [set ::$widget.minmax] 2]
-  }
-  .server.engine_values current 0
-  .server.interface_values set $::interface
-}
-
-# Validate server settings
-
-proc validate_number_minmax {widget} {
-  set value [$widget get]
-  if {[regexp {^(\d+)$} $value]} {
-    set valid 1
-    lassign [set ::$widget.minmax] min max
-    if {$min != "" && [expr $value < $min]} {set valid 0}
-    if {$max != "" && [expr $value > $max]} {set valid 0}
-  } else {
-    set valid 0
-  }
-  if {!$valid} {set value [set ::$widget.previous]}
-  $widget delete 0 end
-  $widget insert 0 $value
-}
-
-proc validate_number_unsigned {value} {
-  if {$value == ""} {return 1}
-  return [regexp {^(\d+)$} $value]
-}
-
-foreach widget {.server.port_value .server.maxconn_value \
-	        .server.threadsmin_value .server.threadsmax_value} {
-  $widget configure -validate key -vcmd "validate_number_unsigned %P"
-  bind $widget <Enter> {set ::%W.previous [%W get]}
-  bind $widget <Leave> {after idle "validate_number_minmax %W"}
-  bind $widget <FocusIn>  {set ::%W.previous [%W get]}
-  bind $widget <FocusOut> {after idle "validate_number_minmax %W"}
-  bind $widget <Shift-ButtonRelease-1> \
-	{%W delete 0 end;%W insert 0 [lindex ${::%W.minmax} 2]}
-}
-
-# --- End of server settings
 
 # Save global settings to folder ini_folder
 
@@ -1508,7 +1550,7 @@ proc save_qmapshack_settings {} {
 uplevel #0 {
   set fd [open "$ini_folder/qmapshack.ini" w]
   fconfigure $fd -buffering full
-  foreach name {tcp.port tcp.interface} {
+  foreach name {tcp.interface tcp.port_srv tcp.port_ovl shading.layer} {
     puts $fd "$name=[set $name]"
   }
   close $fd
@@ -1565,44 +1607,71 @@ proc selection_ok {} {
   return 1
 }
 
-# Wait for complete selection or finish
+# Write Mapsforge TMS files as QMapShack online maps
 
-while {1} {
-  vwait action
-  if {$action == 0} {
-    foreach item {global shading qmapshack} {save_${item}_settings}
-    if {[winfo manager .styles] != ""} {save_theme_settings}
-    exit
+proc write_mapsforge {} {
+
+  foreach item {srv ovl} {
+    set name [set ::tms_name_$item]
+    set port [set ::tcp.port_$item]
+
+    if {$item == "ovl"} {
+      if {!${::shading.onoff}} {return}
+      if {${::shading.layer} == "onmap"} {return}
+    }
+
+    set map "$::tms_folder/$name.tms"
+    puti "[mc m62 $map] ..."
+
+    set fd [open $map w]
+    fconfigure $fd -buffering full
+    puts $fd "<TMS>"
+    puts $fd "<Layer idx=\"0\">"
+    puts $fd "<Title>$name</Title>"
+    if {$item == "srv"} {
+      puts $fd "<MinZoomLevel>$::min_zoom_level</MinZoomLevel>";
+      puts $fd "<MaxZoomLevel>$::max_zoom_level</MaxZoomLevel>";
+    } elseif {$item == "ovl"} {
+      puts $fd "<MinZoomLevel>[expr 21-17]</MinZoomLevel>";
+      puts $fd "<MaxZoomLevel>[expr 21- 9]</MaxZoomLevel>";
+    }
+    set url "http://127.0.0.1:${port}/%1/%2/%3.png"
+    set sfx ""
+    if {$item == "srv"} {
+      if {$::transparent != "false"} \
+        {append sfx "transparent=$::transparent&amp;"}
+      if {$::tile_size != 256} \
+        {append sfx "tileRenderSize=$::tile_size&amp;"}
+      if {$::server_version < 1703 || $sfx != ""} \
+        {regsub -- {(&amp;)+$} "?$sfx" "" sfx}
+    }
+    puts $fd "<ServerUrl>$url$sfx</ServerUrl>"
+    puts $fd "</Layer>"
+    puts $fd "</TMS>"
+    close $fd
   }
-  unset action
-  if {[selection_ok]} {break}
+
 }
 
-# Create Mapsforge.tms file as QMapShack online map
+# Delete Mapsforge TMS files and tile caches
 
-set fd [open "$tms_folder/Mapsforge.tms" w]
-fconfigure $fd -buffering full
-puts $fd "<TMS>"
-puts $fd "<Layer idx=\"0\">"
-puts $fd "<Title>Mapsforge</Title>"
-puts $fd "<MinZoomLevel>$min_zoom_level</MinZoomLevel>";
-puts $fd "<MaxZoomLevel>$max_zoom_level</MaxZoomLevel>";
-set url "http://${ip_address}:${tcp.port}/%1/%2/%3.png"
-set sfx ""
-if {$server_version < 1701} {
-  append sfx "textScale=${text.scale}&amp;"
-  append sfx "userScale=${user.scale}&amp;"
+proc clean_mapsforge {} {
+
+  foreach item {srv ovl} {
+    set name [set ::tms_name_$item]
+    set cache "$::tiles_folder/$name"
+    if {[file exists $cache]} {
+      puti "[mc m60 $cache] ..."
+      catch {file delete -force $cache}
+    }
+    set map "$::tms_folder/$name.tms"
+    if {[file exists $map]} {
+      puti "[mc m61 $map] ..."
+      catch {file delete -force $map}
+    }
+  }
+
 }
-if {$transparent != "false"} \
-  {append sfx "transparent=$transparent&amp;"}
-if {$tile_size != 256} \
-  {append sfx "tileRenderSize=$tile_size&amp;"}
-if {$server_version < 1703 || $sfx != ""} \
-  {regsub -- {(&amp;)+$} "?$sfx" {} sfx}
-puts $fd "<ServerUrl>$url$sfx</ServerUrl>"
-puts $fd "</Layer>"
-puts $fd "</TMS>"
-close $fd
 
 # Process start procedure
 
@@ -1629,18 +1698,18 @@ proc process_start {command process} {
   set pid [pid $fd]
   set exe [file tail [lindex $command 0]]
 
-  set prefix [string toupper $process]
+  set mark "\\\[[string toupper $process]\\\]"
   set    script "if {\[eof $fd\]} {"
   append script "  close $fd;"
   append script "  namespace delete $process;"
   append script "  set ::action 0;"
-  append script "  puts \"[mc m52 $pid $exe]\";"
+  append script "  puti \"[mc m52 $pid $exe]\";"
   append script "} elseif {\[gets $fd line\] >= 0} {"
-  append script "  puts \"($prefix) \$line\";"
+  append script "  puts \"$mark \$line\";"
   append script "}"
   fileevent $fd readable $script
 
-  puts "[mc m51 $pid $exe]"
+  puti "[mc m51 $pid $exe]"
 
 }
 
@@ -1653,7 +1722,7 @@ proc process_stop {process} {
   if {![namespace exists $process]} {return}
   namespace upvar $process pid pid exe exe
 
-  puts "[mc m56 $pid $exe] ..."
+  puti "[mc m56 $pid $exe] ..."
 
   set window_ids {}
   if {$::tcl_platform(os) == "Windows NT"} {
@@ -1667,7 +1736,7 @@ proc process_stop {process} {
     set rc [catch {exec cmd.exe /C START /MIN powershell.exe \
 	-NoProfile -ExecutionPolicy ByPass -File "$tmp.ps1"} result]
     file delete $tmp.ps1
-    if {$rc} {puts "powershell exited abnormally\n$result"}
+    if {$rc} {putw "PowerShell ended abnormally"; putw "$result"}
     set rc [catch {open $tmp.log r} fd]
     if {$rc == 0} {
       set window_ids [read -nonewline $fd]
@@ -1676,8 +1745,8 @@ proc process_stop {process} {
     catch "file delete $tmp.log"
   } elseif {$::tcl_platform(os) == "Linux"} {
     if {[auto_execok wmctrl] == ""} {
-      puts "Please install program 'wmctrl' by Linux package manager"
-      puts "to be able to close desktop windows of process '$exe'."
+      putw "Please install program 'wmctrl' by Linux package manager"
+      putw "to be able to close desktop windows of process '$exe'."
       return
     }
     # Search desktop windows of process and children
@@ -1692,11 +1761,11 @@ proc process_stop {process} {
   }
 
   if {![llength $window_ids]} {
-    puts "[mc m57 $pid $exe]"
+    puti "[mc m57 $pid $exe]"
     return
   }
 
-  puts "[mc m58 $pid $exe]"
+  puti "[mc m58 $pid $exe]"
 
   if {$::tcl_platform(os) == "Windows NT"} {
     # Send WM_CLOSE (0x0010) message to main desktop window
@@ -1711,7 +1780,7 @@ proc process_stop {process} {
     set rc [catch {exec cmd.exe /C START /MIN powershell.exe \
 	-NoProfile -ExecutionPolicy ByPass -File "$tmp.ps1"} result]
     file delete $tmp.ps1
-    if {$rc} {puts "powershell exited abnormally\n$result"; return}
+    if {$rc} {putw "PowerShell ended abnormally"; putw "$result"; return}
   } elseif {$::tcl_platform(os) == "Linux"} {
     # Send WM_DELETE_WINDOW event to desktop window(s)
     foreach item $window_ids {catch "exec wmctrl -i -c $item 2>@ stdout"}
@@ -1738,6 +1807,7 @@ proc process_kill {process} {
 
   fileevent $fd readable ""
   close $fd
+  update
 
   if {$::tcl_platform(os) == "Windows NT"} {
     catch {exec TASKKILL /F /PID $pid}
@@ -1745,7 +1815,7 @@ proc process_kill {process} {
     catch {exec kill -SIGTERM $pid}
   }
 
-  puts "[mc m53 $pid $exe]"
+  puti "[mc m53 $pid $exe]"
   namespace delete $process
 
 }
@@ -1758,13 +1828,41 @@ proc process_running {process} {
 
 # Mapsforge tile server start procedure
 
-proc srv_start {} {
+proc srv_start {srv} {
+
+  set shading ${::shading.onoff}
+  set name [set ::tms_name_$srv]
+  set port [set ::tcp.port_$srv]
+
+  if {$srv == "srv"} {
+    if {${::shading.layer} == "asmap"} {set shading 0}
+    append name " Tile Server \[SRV\]"
+  } elseif {$srv == "ovl"} {
+    if {!${::shading.onoff}} {return}
+    if {${::shading.layer} == "onmap"} {return}
+    append name " Overlay Server \[OVL\]"
+  }
+
+  # Server's TCP port already or still (after kill) in use?
+  set count 0
+  while {$count < 5} {
+    set rc [catch {socket -server {} -myaddr 127.0.0.1 ${port}} fd]
+    if {!$rc} {break}
+    incr count
+    after 200
+  }
+  if {$rc} {
+    error_message [mc m59 $name ${port}] return
+    return
+  }
+  close $fd
+  update
 
   lappend command $::java_cmd -Xmx1G -Xms256M -Xmn256M
   if {[info exists ::java_args]} {lappend command {*}$::java_args}
 
-  set engine [.server.engine_values get]
-  if {$::server_version >= 1700 && $engine != "(default)"} {
+  set engine ${::rendering.engine}
+  if {$engine != "(default)"} {
     set engine [file dirname [file normalize $::server_jar]]/$engine
     if {$::java_version <= 8} {
       lappend command -Xbootclasspath/p:$engine
@@ -1782,13 +1880,14 @@ proc srv_start {} {
 # lappend command -Dlog4j.configuration=file:<folder>/log4j.properties
 
   lappend command -Dsun.java2d.opengl=true
-  lappend command -Dsun.java2d.renderer.log=true
+# lappend command -Dsun.java2d.renderer.log=true
+  lappend command -Dsun.java2d.renderer.log=false
   lappend command -Dsun.java2d.renderer.useLogger=true
 # lappend command -Dsun.java2d.renderer.doStats=true
 # lappend command -Dsun.java2d.renderer.doChecks=true
+# lappend command -Dsun.java2d.renderer.useThreadLocal=true
   lappend command -Dsun.java2d.renderer.profile=speed
   lappend command -Dsun.java2d.renderer.useRef=hard
-  lappend command -Dsun.java2d.renderer.useThreadLocal=true
   lappend command -Dsun.java2d.renderer.pixelWidth=2048
   lappend command -Dsun.java2d.renderer.pixelHeight=2048
   lappend command -Dsun.java2d.renderer.tileSize_log2=8
@@ -1799,40 +1898,43 @@ proc srv_start {} {
   lappend command -Dsun.java2d.render.bufferSize=524288
 
   lappend command -jar [file normalize $::server_jar]
-  lappend command -if ${::tcp.interface} -p ${::tcp.port}
-  set maps_folder [file normalize $::maps_folder]
-  set map_list [lmap index [.maps_values curselection] \
+  lappend command -if ${::tcp.interface} -p ${port}
+
+  if {$srv == "srv"} {
+    set maps_folder [file normalize $::maps_folder]
+    set map_list [lmap index [.maps_values curselection] \
 	{set map $maps_folder/[.maps_values get $index]}]
-  lappend command -m [join $map_list ","]
-  if {$::server_version >= 1704} {
-    if {${::maps.world} == 1} {lappend command -wm}
-  }
-  set theme [.themes_values get]
-  if {$theme != "(default)"} {
-    set themes_folder [file normalize $::themes_folder]
-    set theme_file "$themes_folder/$theme"
-    lappend command -t $theme_file
-    if {[winfo manager .styles] != ""} {
-      lassign [get_selected_style_overlays] style_id overlay_ids
-      lappend command -s $style_id
-      lappend command -o $overlay_ids
+    lappend command -m [join $map_list ","]
+    if {$::server_version >= 1704} {
+      if {${::maps.world} == 1} {lappend command -wm}
     }
-  }
-  set language [.lang_value get]
-  if {$language != ""} {lappend command -l $language}
-  set renderer [.renderer_values get]
-  lappend command -r $renderer
+    set theme [.themes_values get]
+    if {$theme != "(default)"} {
+      set themes_folder [file normalize $::themes_folder]
+      set theme_file "$themes_folder/$theme"
+      lappend command -t $theme_file
+      if {[winfo manager .styles] != ""} {
+	lassign [get_selected_style_overlays] style_id overlay_ids
+	lappend command -s $style_id
+	lappend command -o $overlay_ids
+      }
+    }
+    set language [.lang_value get]
+    if {$language != ""} {lappend command -l $language}
+    set renderer [.renderer_values get]
+    lappend command -r $renderer
 
-  if {$::server_version >= 1604} {
     lappend command -gc ${::maps.gamma}
-  }
-  if {$::server_version >= 1601} {
     lappend command -cs ${::maps.contrast}
+
+    lappend command -sft ${::text.scale}
+    lappend command -sfs ${::symbol.scale}
+    lappend command -sfu ${::user.scale}
+  } elseif {$srv == "ovl"} {
+    lappend command -m ""
   }
 
-  if {$::server_version >= 1603 \
-      && [.shading_show_hide cget -state] == "normal" \
-      && ${::shading.onoff}} {
+  if {$shading} {
     set algorithm ${::shading.algorithm}
     if {$algorithm == "simple"} {
       set linearity ${::shading.simple.linearity}
@@ -1851,35 +1953,29 @@ proc srv_start {} {
     lappend command -d [file normalize ${::dem.folder}]
   }
 
-  if {$::server_version >= 1701} {
-    lappend command -sft ${::text.scale}
-    lappend command -sfs ${::symbol.scale}
-    lappend command -sfu ${::user.scale}
-  }
+  lappend command -mxq ${::tcp.maxconn}
+  lappend command -mxt ${::threads.max}
+  lappend command -mit ${::threads.min}
 
-  if {$::server_version >= 1700} {
-    lappend command -mxq ${::tcp.maxconn}
-    lappend command -mxt ${::threads.max}
-    lappend command -mit ${::threads.min}
-  }
+  puti "[mc m54 $name] ..."
+  puts "[join [lmap item $command {regsub {^(.* +.*|())$} $item {"\1"}}]]"
 
-  puts "[mc m54 "Mapsforge Tile Server (SRV)"] ..."
-  puts "[join [lmap item $command {regsub {^(.* +.*)$} $item {"\1"}}]]"
-
-  process_start $command srv
+  process_start $command $srv
 
   # Wait until port becomes ready to accept connections or server aborts
   # Send dummy render request and wait for rendering initialization
 
-  set url "http://${::ip_address}:${::tcp.port}/0/0/0.png"
+  set url "http://127.0.0.1:${port}/0/0/0.png"
   if {$::server_version < 1703} {append url "?"}
-  while {[process_running srv]} {
-    if {[catch "::http::geturl $url" token]} {after 10; continue}
+  while {[process_running $srv]} {
+    if {[catch {::http::geturl $url} token]} {after 10; continue}
     set size [::http::size $token]
     ::http::cleanup $token
     if {$size} {break}
   }
   update
+
+  if {![process_running $srv]} {error_message [mc m55 $name] return}
 
 }
 
@@ -1890,23 +1986,37 @@ proc qms_start {} {
   lappend command $::qms_cmd --no-splash --style fusion
   if {[info exists ::qms_args]} {lappend command {*}$::qms_args}
 
-  puts "[mc m54 "QMapShack (QMS)"] ..."
+  set name "QMapShack \[QMS\]"
+  puti "[mc m54 $name] ..."
   puts "[join [lmap item $command {regsub {^(.* +.*)$} $item {"\1"}}]]"
 
   process_start $command qms
 
 }
 
+# Wait for complete selection or finish
+
+while {1} {
+  vwait action
+  if {$action == 0} {
+    foreach item {global shading qmapshack} {save_${item}_settings}
+    if {[winfo manager .styles] != ""} {save_theme_settings}
+    exit
+  }
+  unset action
+  if {[selection_ok]} {break}
+}
+
 # Start Mapsforge tile server
 
-srv_start
+srv_start srv
 
 # Start QMapShack (if server is running)
 
 if {[process_running srv]} {
+  srv_start ovl
+  write_mapsforge
   qms_start
-} else {
-  error_message [mc m55] return
 }
 
 # Wait for new selection or finish
@@ -1915,14 +2025,15 @@ update idletasks
 if {![info exists action]} {vwait action}
 
 # After changing Mapsforge map(s) or theme:
-# Stop tile server, clear tiles cache folder, restart tile server
+# Stop tile server, clear tile cache folder, restart tile server
 
 while {$action == 1} {
   unset action
   if {[selection_ok]} {
-    process_kill srv
-    catch {file delete -force "$tiles_folder/Mapsforge"}
-    srv_start
+    foreach item {srv ovl} {process_kill $item}
+    clean_mapsforge
+    write_mapsforge
+    foreach item {srv ovl} {srv_start $item}
     update idletasks
   }
   if {![info exists action]} {vwait action}
@@ -1931,16 +2042,17 @@ unset action
 
 # Kill Mapsforge tile server first, avoid 'sendError' exception
 
-if {[process_running srv]} {process_kill srv}
+foreach item {srv ovl} \
+  {if {[process_running $item]} {process_kill $item}}
 
 # Stop QMapShack or kill, if not terminating on request
 
-if {[process_running qms]} {process_stop qms}
-if {[process_running qms]} {process_kill qms}
+foreach item {stop kill} \
+  {if {[process_running qms]} {process_$item qms}}
 
-# Delete file Mapsforge.tms and Mapsforge tiles cache folder
+# Delete file Mapsforge tms file(s) and tile cache folder(s)
 
-catch {file delete -force "$tms_folder/Mapsforge.tms" "$tiles_folder/Mapsforge"}
+clean_mapsforge
 
 # Unmap main toplevel window
 
@@ -1949,7 +2061,7 @@ wm withdraw .
 # Wait until output console window was closed
 
 if {[winfo ismapped .console]} {
-  puts "[mc m99]"
+  puti "[mc m99]"
   wm protocol .console WM_DELETE_WINDOW ""
   bind .console <ButtonRelease-3> "destroy .console"
   tkwait window .console
