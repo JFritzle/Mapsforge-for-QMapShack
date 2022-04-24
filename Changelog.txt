@@ -1,7 +1,7 @@
-2022-04-23 (2)
+2022-04-24
 
-- Fix bug evaluating maps folder on operating system Windows,
-  if more than one folder was defined.
+- Fix bug evaluating map & cache folder path(s) on operating system Windows,
+  if more than one map folder path was defined or if folder paths contain spaces
 
 2022-04-23
 

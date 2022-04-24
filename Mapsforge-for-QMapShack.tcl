@@ -354,7 +354,12 @@ if {$tcl_platform(os) == "Windows NT"} {
     set rc [catch {registry get \
 	{HKEY_CURRENT_USER\SOFTWARE\QLandkarte\QMapShack\Canvas} $item} \
 	value]
-    if {!$rc} {set $item [lindex $value 0]}
+    if {$rc} {continue}
+    switch [registry type \
+	{HKEY_CURRENT_USER\SOFTWARE\QLandkarte\QMapShack\Canvas} $item] {
+      "sz"		{set $item $value}
+      "multi_sz"	{set $item [lindex $value 0]}
+    }
   }
 } elseif {$tcl_platform(os) == "Linux"} {
   set rc [catch {open ~/.config/QLandkarte/QMapShack.conf r} fd]
