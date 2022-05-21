@@ -1,3 +1,9 @@
+2022-05-19
+
+- Avoid script aborting when java path by ini file variable "java_cmd" contains spaces
+- Start QMapShack before optionally starting Mapsforge hillshading overlay server
+  to speed up the launch of QMapShack application
+
 2022-04-24
 
 - Fix bug evaluating map & cache folder path(s) on operating system Windows,
