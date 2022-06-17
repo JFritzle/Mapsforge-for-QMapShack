@@ -13,7 +13,7 @@ This project’s intension is to easily let the user interactively and comfortab
 
 Graphical user interface is a single script written in _Tcl/Tk_ scripting language and is executable on _Microsoft Windows_ and _Linux_ operating system. Language-neutral script file _Mapsforge-for-QMapShack.tcl_ an additional user settings file and at least one localized resource file. Additional files must follow _Tcl/Tk_ syntax rules too. 
 
-User settings file is named is named _Mapsforge-for-QMapShack.ini_. A template file is provided.
+User settings file is named _Mapsforge-for-QMapShack.ini_. A template file is provided.
 
 Resource files are named _Mapsforge-for-QMapShack.<locale\>_, where _<locale\>_ matches locale’s 2 lowercase letters ISO 639-1 code. English localized resource file _Mapsforge-for-QMapShack.en_ and German localized resource file _Mapsforge-for-QMapShack.de_ are provided. Script can be easily localized to any other system’s locale by providing a corresponding resource file using English resource file as a template. 
 
@@ -50,12 +50,11 @@ Windows: Copy downloaded jar file(s) into Mapsforge tile server’s installation
 Linux: Copy downloaded jar file(s) into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
 
 5.	Tcl/Tk scripting language version 8.6 or higher binaries  
-Windows: Download and install latest stable version of Tcl/Tk. See https://wiki.tcl-lang.org/page/Binary+Distributions for available binary distributions. Recommended distribution is [teclab’s tcltk](https://github.com/teclab-at/tcltk/tree/tcl86/releases) repository. First select most recent installation file _tcltk86-8.6.x.y.tcl86.Win10.x86_64.tgz_, then press _Download_ button. Unpack zipped tar archive (file extension _.tgz_) into your Tcl/Tk installation folder, e.g. _%programfiles%/Tcl_.  
+Windows: Download and install latest stable version of Tcl/Tk. See https://wiki.tcl-lang.org/page/Binary+Distributions for available binary distributions. Recommended distribution is [teclab’s tcltk](https://github.com/teclab-at/tcltk/releases) repository. First select most recent installation file _tcltk86-8.6.x.y.tcl86.Win10.x86_64.tgz_, then press _Download_ button. Unpack zipped tar archive (file extension _.tgz_) into your Tcl/Tk installation folder, e.g. _%programfiles%/Tcl_.  
 Linux: Install packages _tcl, tcllib, tk_ and _tklib_ using Linux package manager. Package _tklib_ is required for tooltips. (Ubuntu: _apt install tcl tcllib tk tklib_)
 
 6.	Mapsforge maps  
-Download Mapsforge maps for example from [openandromaps.org](https://www.openandromaps.org).  
-Each downloaded OpenAndroMaps map archive contains a map file (file extension _.map_) and a points-of-interest file (file extension _.poi_). Tile server will render the former file, QMapShack is able to handle the latter file by itself.  
+Download Mapsforge maps for example from [openandromaps.org](https://www.openandromaps.org). Each downloaded OpenAndroMaps map archive contains a map file (file extension _.map_) and a points-of-interest file (file extension _.poi_). Tile server will render the former file, QMapShack is able to handle the latter file by itself.  
 Note:  
 Mapsforge tile server version 0.17.4 or higher is required for optionally appending built-in Mapsforge world map.
 
@@ -120,10 +119,11 @@ Screenshot of QMapShack showing Heidelberg (Germany) and using
 * Built-in world map  
 Since the built-in [Mapsforge world map](https://download.mapsforge.org/maps/world/world.map) only shows the coastline, it only serves as a rough overview. Due to map's low resolution, coastlines show inaccurate at high resolution. Because the Mapsforge renderer prefers land on the world map to sea on the selected detailed local map, it may be advisable to disable the built-in world map when rendering coastal regions at high resolution.
 * Hillshading  
-  * When selecting "Hillshading on map", Mapsforge's algorithm renders map and hillshading in one single step. Flat area gets a medium shade of gray, while slopes get a darker or a brighter shade of gray depending on the angle of incidence of light. Thus map has a shade of gray everywhere.  
+  * When selecting "Hillshading on map", map and hillshading are rendered  into one single map. Flat area gets a medium shade of gray, while slopes get a darker or a brighter shade of gray depending on the angle of incidence of light. Thus map has a shade of gray everywhere.  
 Activate QMapShack's map "Mapsforge Map" if "Hillshading on map" was selected.  
 Same result can be achieved faster by not enabling hillshading in graphical user interface but enabling QMapShack's built-in hillshading.
-  * When selecting "Hillshading as map", Mapsforge's algorithm renders map and hillshading in two steps. Post-processing in step two, gray value of flat area gets mapped to full transparency, darker gray values get mapped to transparency levels of black, brighter gray values get mapped to transparency levels of white. Hillshading map as alpha-transparent overlay from step two finally gets composed with map from step one. Thus the flatter the area, the more the original colors of the map shine through. [OpenTopoMap](https://opentopomap.org) uses this same hillshading technique.  
+  * When selecting "Hillshading as map", map and hillshading are rendered as two separate maps. Post-processing hillshading, gray value of flat area gets mapped to full transparency, darker gray values get mapped to transparency levels of black, brighter gray values get mapped to transparency levels of white. Thus the flatter the area, the more the original colors of the map shine through. Finally, hillshading can be used as an alpha-transparent overlay for any map.  
+[OpenTopoMap](https://opentopomap.org) uses this same hillshading technique.  
 Activate <ins>first</ins> QMapShack's maps "Mapsforge Map" <ins>and second</ins> "Mapsforge Hillshading" if "Hillshading as map" was selected. Former shows map tiles without hillshading, latter shows hillshading as alpha-transparent overlay. Map "Mapsforge Hillshading" can also be used as overlay for other maps not containing hillshading, e.g. OpenStreetMap.  
 Same result can not be achieved by QMapShack's built-in hillshading
 * If QMapShack is showing rendered Mapsforge map a bit blurry, then within QMapShack  

@@ -330,7 +330,7 @@ if {$tcl_platform(os) == "Windows NT"} {
     set pid $result
 #   error_message [mc e01 "QMapShack" $exe $pid] exit
     set rc [messagebox -title $title -type yesno -default no -icon question \
-	-message [mc e01 "QMapShack" $exe $pid] -detail [mc e0e02]]
+	-message [mc e01 "QMapShack" $exe $pid] -detail [mc e02]]
     if {$rc == "no"} {exit}
     catch {exec kill -SIGTERM $pid}
   }
@@ -388,6 +388,10 @@ unset cachePath mapPath
 foreach item {qms_cmd java_cmd} {
   set value [set $item]
   if {[auto_execok $value] == ""} {error_message [mc e04 $value $item] exit}
+}
+foreach item {server_jar} {
+  set value [set $item]
+  if {![file isfile $value]} {error_message [mc e05 $value $item] exit}
 }
 foreach item {maps_folder themes_folder tms_folder tiles_folder} {
   set value [set $item]
@@ -853,8 +857,9 @@ proc validate_float_minmax {widget} {
   if {[regexp {^(\d+\.?\d*|\d*\.?\d+)$} $value]} {
     set valid 1
     lassign [set ::$widget.minmax] min max
-    if {$min != "" && [expr $value < $min]} {set valid 0}
-    if {$max != "" && [expr $value > $max]} {set valid 0}
+    set test [regsub {([+-]?)0*([0-9]+.*)} $value {\1\2}]
+    if {$min != "" && [expr $test < $min]} {set valid 0}
+    if {$max != "" && [expr $test > $max]} {set valid 0}
   } else {
     set valid 0
   }
@@ -1135,8 +1140,9 @@ proc validate_number_minmax {widget} {
   if {[regexp {^(\d+)$} $value]} {
     set valid 1
     lassign [set ::$widget.minmax] min max
-    if {$min != "" && [expr $value < $min]} {set valid 0}
-    if {$max != "" && [expr $value > $max]} {set valid 0}
+    set test [regsub {([+-]?)0*([0-9]+.*)} $value {\1\2}]
+    if {$min != "" && [expr $test < $min]} {set valid 0}
+    if {$max != "" && [expr $test > $max]} {set valid 0}
   } else {
     set valid 0
   }
