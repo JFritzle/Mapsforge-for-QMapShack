@@ -1,3 +1,12 @@
+2022-07-14
+
+- Drop support for tile server versions before version 0.17.4
+- Script variable "transparent" from ini file is no longer used
+- Removed restriction to fully qualified (absolute) path names in ini file,
+  pathnames relative to the script installation folder are now acceptable
+- Minor script optimizations
+- Minor README changes
+
 2022-06-17
 
 - Check server JAR file by script variable "server_jar" for existence
