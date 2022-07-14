@@ -40,7 +40,7 @@ For Java version 8 (or higher), switch branch to _Java8_, navigate to folder _ma
 Windows: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _%programfiles%/MapsforgeSrv_.  
 Linux: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
 Note:  
-Currently Mapsforge tile server version 0.17.1 or higher is required. Previous server versions are no longer supported.  
+Currently Mapsforge tile server version 0.17.4 or higher is required. Previous server versions are no longer supported.  
 
 4. Alternative Marlin rendering engine (optional)  
 [Marlin](https://github.com/bourgesl/marlin-renderer) is an open source Java2D rendering engine optimized for performance.  
@@ -55,8 +55,6 @@ Linux: Install packages _tcl, tcllib, tk_ and _tklib_ using Linux package manage
 
 6.	Mapsforge maps  
 Download Mapsforge maps for example from [openandromaps.org](https://www.openandromaps.org). Each downloaded OpenAndroMaps map archive contains a map file (file extension _.map_) and a points-of-interest file (file extension _.poi_). Tile server will render the former file, QMapShack is able to handle the latter file by itself.  
-Note:  
-Mapsforge tile server version 0.17.4 or higher is required for optionally appending built-in Mapsforge world map.
 
 7.	Mapsforge themes  
 Mapsforge themes _Elevate_ and _Elements_ (file extension _.xml_) suitable for OpenAndroMaps are available for download at [openandromaps.org](https://www.openandromaps.org).  

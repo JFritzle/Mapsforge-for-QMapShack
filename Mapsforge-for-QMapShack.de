@@ -114,25 +114,28 @@ m99	"Ausgabe-Konsole kann jetzt geschlossen werden!"
 # -- Beschreibung der Skript-Variablen ----------------------------------------
 #
 # ini_folder
-#   Ordner zum Sichern/Wiederherstellen der Einstellungen
+#   Absoluter oder relativer Pfad des Ordners
+#   zum Sichern/Wiederherstellen der Einstellungen
 # qms_cmd
 #   Befehl um QMapShack von der Befehlszeile aufzurufen
-#   Entweder vollständiger Pfad der ausführbaren QMapShack-Datei (.exe)
-#   oder Name der ausführbaren QMapShack-Datei, falls über Suchpfad gefunden
+#   Entweder absoluter oder relativer Pfad der QMapShack-Programmdatei (.exe)
+#   oder Name der QMapShack-Programmdatei, falls über den Suchpfad gefunden
 # qms_args
 #   Weitere optionale QMapShack-Argumente
 # maps_folder
-#   Ordner wird rekursiv nach Mapsforge-Karten mit Endung .map durchsucht
+#   Absoluter oder relativer Pfad des Ordners, rekursiv durchsucht
+#   nach Mapsforge-Karten mit Endung .map durchsucht
 # themes_folder
-#   Ordner wird rekursiv nach Mapsforge-Themen mit Endung .xml durchsucht
+#   Absoluter oder relativer Pfad des Ordners, rekursiv durchsucht
+#   nach Mapsforge-Themen mit Endung .xml durchsucht
 # java_cmd
 #   Befehl um Java von der Befehlszeile aufzurufen
-#   Entweder vollständiger Pfad des ausführbaren Java-Programms (.exe)
-#   oder Name des ausführbaren Java-Programms, falls über Suchpfad gefunden
+#   Entweder absoluter oder relativer Pfad der Java-Programmdatei (.exe)
+#   oder Name der Java-Programmdatei, falls über den Suchpfad gefunden
 # java_args
 #   Weitere optionale Java-Argumente
 # server_jar
-#   Vollständiger Pfad des lokalen Mapsforge Tile Servers Java-Archiv (.jar)
+#   Absoluter oder relativer Pfad des Mapsforge Tile Servers Java-Archiv (.jar)
 #   mapsforgesrv4java8.jar  ... für Java version 8 (oder höher)
 #   mapsforgesrv-fatjar.jar ... für Java version 11 oder höher
 # min_zoom_level
@@ -142,9 +145,6 @@ m99	"Ausgabe-Konsole kann jetzt geschlossen werden!"
 # tile_size
 #   Pixel einer Kachel je Richtung, wird zur Ausgabe auf 256 Pixel skaliert
 #   (Default: 256, d.h. keine Pixel-Skalierung erforderlich)
-# transparent
-#   "false" ... Kachel-Hintergrund wird mit undurchsichtiger Farbe erzeugt
-#   "true"  ... Kachel-Hintergrund wird mit PNG-Transparenz erzeugt
 # language
 #   Bevorzugte Mapsforge-Kartensprache (2 Kleinbuchstaben ISO 639-1 Code)
 #   (z.B. "en", "fr", "de" etc. oder "" für Mapsforge-Defaultsprache)
