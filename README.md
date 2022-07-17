@@ -17,11 +17,8 @@ User settings file is named _Mapsforge-for-QMapShack.ini_. A template file is pr
 
 Resource files are named _Mapsforge-for-QMapShack.<locale\>_, where _<locale\>_ matches locale’s 2 lowercase letters ISO 639-1 code. English localized resource file _Mapsforge-for-QMapShack.en_ and German localized resource file _Mapsforge-for-QMapShack.de_ are provided. Script can be easily localized to any other system’s locale by providing a corresponding resource file using English resource file as a template. 
 
-Screenshot of graphical user interface on Microsoft Windows operating system: 
-![GUI_Windows](https://user-images.githubusercontent.com/62614244/164913878-79e973d6-e50b-4c10-a272-f9038f7f1a61.png)
-
-Screenshot of graphical user interface on Linux operating system (Ubuntu):
-![GUI_Linux](https://user-images.githubusercontent.com/62614244/164913880-de9bd06c-8112-4dba-9668-ffdb0d9dcbbd.png)
+Screenshot of graphical user interface: 
+![GUI](https://user-images.githubusercontent.com/62614244/164913878-79e973d6-e50b-4c10-a272-f9038f7f1a61.png)
 
 ### Installation
 
@@ -51,6 +48,8 @@ Linux: Copy downloaded jar file(s) into Mapsforge tile server’s installation f
 
 5.	Tcl/Tk scripting language version 8.6 or higher binaries  
 Windows: Download and install latest stable version of Tcl/Tk. See https://wiki.tcl-lang.org/page/Binary+Distributions for available binary distributions. Recommended distribution is [teclab’s tcltk](https://github.com/teclab-at/tcltk/releases) repository. First select most recent installation file _tcltk86-8.6.x.y.tcl86.Win10.x86_64.tgz_, then press _Download_ button. Unpack zipped tar archive (file extension _.tgz_) into your Tcl/Tk installation folder, e.g. _%programfiles%/Tcl_.  
+Note 1: [7-Zip](https://www.7-zip.org) file archiver/extractor is able to unpack _.tgz_ archives.   
+Note 2: Archives of latest releases for Windows at teclab’s tcltk repository may have file extension _.zip_ while they should have extension _.tgz_. Rename extension to _.tgz_ before unpacking archive.  
 Linux: Install packages _tcl, tcllib, tk_ and _tklib_ using Linux package manager. Package _tklib_ is required for tooltips. (Ubuntu: _apt install tcl tcllib tk tklib_)
 
 6.	Mapsforge maps  
