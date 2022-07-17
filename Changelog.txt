@@ -1,4 +1,39 @@
 2022-07-17
 
-- Initial version
 - README: Location of "marlin-*.jar" files for mapsforgesrv's branch "Java8" was incorrect
+
+2022-07-14
+
+- Drop support for tile server versions before version 0.17.4
+- Script variable "transparent" from ini file is no longer used
+- Removed restriction to fully qualified (absolute) path names in ini file,
+  pathnames relative to the script installation folder are now acceptable
+- Minor script optimizations
+- Minor README changes
+
+2022-06-17
+
+- Check server JAR file by script variable "server_jar" for existence
+- Allow leading sign and/or digits 0 when validating number input
+- Missing translation for "kill or restart server" query messagebox on Linux platform
+- Minor README changes
+
+2022-05-19
+
+- Avoid script aborting when java path by ini file variable "java_cmd" contains spaces
+- Start QMapShack before optionally starting Mapsforge hillshading overlay server
+  to speed up the launch of QMapShack application
+
+2022-04-24
+
+- Fix bug evaluating map & cache folder path(s) on operating system Windows,
+  if more than one map folder path was defined or if folder paths contain spaces
+
+2022-04-23
+
+- Get QMapShack's online maps folder and tile cache folder from QMapShack's configuration.
+  Script variables "tms_folder" and "tiles_folder" from ini file are no longer required.
+- Script variable "ip_address" from ini file is no longer required.
+- Add optional hillshading as alpha-transparent overlay ("Hillshading as map").
+- Enhance console output and make it more readable.
+- Drop support for tile server versions before version 0.17.1.
