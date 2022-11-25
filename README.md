@@ -24,7 +24,8 @@ Screenshot of graphical user interface:
 
 1.	QMapShack  
 Windows: If not yet installed, download and install latest QMapShack version from [download section](https://github.com/Maproom/qmapshack/releases).  
-Linux: If not yet installed, install QMapShack package using Linux package manager. (Ubuntu: _apt install qmapshack gdal-bin gdal-data proj-bin proj-data routino_)
+Linux: If not yet installed, install QMapShack package using Linux package manager. (Ubuntu: _apt install qmapshack gdal-bin gdal-data proj-bin proj-data routino_)  
+Run QMapShack at least once and initialize map & cache folders by 'File -> Setup Map Paths'.
 
 2.	Java runtime environment version 8 or higher   
 Windows: If not yet installed, download and install Java, e.g. from [Oracle](https://www.java.com).  
@@ -61,7 +62,15 @@ Note:
 In order "Hillshading on map" to be applied to rendered map tiles, hillshading has to be enabled in theme file too. _Elevate_ and _Elements_ themes version 5 or higher do enable hillshading.
 
 8. DEM data (optional, required for hillshading)  
-Download and store HGT files with DEM (Digital Elevation Model) data for the regions to be rendered. HGT files with 3 arc seconds resolution are available for example at [viewfinderpanoramas.org](http://www.viewfinderpanoramas.org/Coverage%20map%20viewfinderpanoramas_org3.htm).
+Download and store DEM (Digital Elevation Model) data for the regions to be rendered.
+Notes:  
+Either HGT files or ZIP archives containing 1 equally named HGT file may be supplied.  
+Example: ZIP archive N49E008.zip containing 1 single HGT file N49E008.hgt.  
+While 1\" (arc second) resolution DEM data have a significantly higher accuracy than 3\" resolution, hillshading assumes significantly much more time. Therefore 3\" resolution usually is better choice.  
+    
+   \- HGT files with 3\" resolution SRTM (Shuttle Radar Topography Mission) data are available for whole world at [viewfinderpanoramas.org](http://www.viewfinderpanoramas.org/Coverage%20map%20viewfinderpanoramas_org3.htm). Unzip downloaded ZIP files to DEM folder.  
+\- HGT files with 1\" resolution DEM data are available for selected regions at [viewfinderpanoramas.org](http://www.viewfinderpanoramas.org/Coverage%20map%20viewfinderpanoramas_org1.htm). Unzip downloaded ZIP files to DEM folder.  
+\- ZIP archives with 3\" and 1\" resolution compiled and resampled by Sonny are available for selected regions at [Sonny's Digital LiDAR Terrain Models of European Countries](https://sonny.4lima.de). LiDAR data where available are more precise than SRTM data. Store downloaded ZIP files to DEM folder.
 
 9.	Mapsforge for QMapShack graphical user interface script  
 Download language-neutral script file _Mapsforge-for-QMapShack.tcl_, user settings file _Mapsforge-for-QMapShack.ini_ and at least one localized resource file.  

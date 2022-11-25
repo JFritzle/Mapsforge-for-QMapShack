@@ -387,6 +387,7 @@ if {$tcl_platform(os) == "Windows NT"} {
       "sz"		{set $item $value}
       "multi_sz"	{set $item [lindex $value 0]}
     }
+    if {[set $item] == ""} {unset $item}
   }
 } elseif {$tcl_platform(os) == "Linux"} {
   set rc [catch {open ~/.config/QLandkarte/QMapShack.conf r} fd]
@@ -399,6 +400,7 @@ if {$tcl_platform(os) == "Windows NT"} {
       if {$index < 0} {continue}
       regexp {^.*?=(.*)$} [lindex $data $index] "" value
       set $item [string trim [lindex [split $value ,] 0]]
+      if {[set $item] == ""} {unset $item}
     }
     unset data
   }
@@ -1661,13 +1663,20 @@ proc write_mapsforge {} {
       puts $fd "<MinZoomLevel>$::min_zoom_level</MinZoomLevel>";
       puts $fd "<MaxZoomLevel>$::max_zoom_level</MaxZoomLevel>";
     } elseif {$item == "ovl"} {
-      puts $fd "<MinZoomLevel>[expr 21-17]</MinZoomLevel>";
-      puts $fd "<MaxZoomLevel>[expr 21- 9]</MaxZoomLevel>";
+      if {$::server_version > 1800 } {
+	set max 18
+	set min  7
+      } else {
+	set max 17
+	set min  9
+      }
+      puts $fd "<MinZoomLevel>[expr 21-$max]</MinZoomLevel>";
+      puts $fd "<MaxZoomLevel>[expr 21-$min]</MaxZoomLevel>";
     }
     set url "http://127.0.0.1:${port}/%1/%2/%3.png"
     set sfx ""
     if {$item == "srv" && $::tile_size != 256} \
-        {append sfx "tileRenderSize=?$::tile_size"}
+	{append sfx "tileRenderSize=?$::tile_size"}
     puts $fd "<ServerUrl>$url$sfx</ServerUrl>"
     puts $fd "</Layer>"
     puts $fd "</TMS>"
@@ -1720,19 +1729,18 @@ proc process_start {command process} {
 
   set pid [pid $fd]
   set exe [file tail [lindex $command 0]]
-
-  set mark "\\\[[string toupper $process]\\\]"
-  set    script "if {\[eof $fd\]} {"
-  append script "  close $fd;"
-  append script "  namespace delete $process;"
-  append script "  set ::action 0;"
-  append script "  puti \"[mc m52 $pid $exe]\";"
-  append script "} elseif {\[gets $fd line\] >= 0} {"
-  append script "  puts \"$mark \$line\";"
-  append script "}"
-  fileevent $fd readable $script
-
   puti "[mc m51 $pid $exe]"
+
+  append mark {\[} [string toupper $process] {\]}
+  fileevent $fd readable "
+	if {\[eof $fd\]} {
+	  close $fd;
+	  namespace delete $process;
+	  set ::action 0;
+	  puti \"[mc m52 $pid $exe]\";
+	} else {
+	  while {\[gets $fd line\] >= 0} {puts \"$mark \$line\"};
+	}"
 
 }
 
