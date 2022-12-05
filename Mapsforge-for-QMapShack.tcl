@@ -190,6 +190,7 @@ bind Checkbutton <Return> {%W invoke}
 foreach {name value} {
 *Button.borderWidth 2
 *Button.highlightThickness 1
+*Button.padX 0
 *Button.padY 0
 *Button.takeFocus 1
 *Checkbutton.anchor w
