@@ -100,9 +100,11 @@ l86	"Höhenwinkel der Lichtquelle"
 l87	"Skalierung der Grauwertgröße"
 
 b91	"Alle"
-b91t	"Alle auswählen"
+b91t	"Alles auswählen"
 b92	"Reset"
 b92t	"Zurücksetzen auf\nDefault-Werte"
+b93	"Keine"
+b93t	"Alles abwählen"
 
 l99	"Ausgabe-Konsole"
 c99	"Ausgabe-Konsole anzeigen"

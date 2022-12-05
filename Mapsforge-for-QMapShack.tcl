@@ -905,8 +905,7 @@ foreach widget {.shading.simple_value1 .shading.simple_value2 \
 
 # Save hillshading settings to folder ini_folder
 
-proc save_shading_settings {} {
-uplevel #0 {
+proc save_shading_settings {} {uplevel #0 {
   set fd [open "$ini_folder/hillshading.ini" w]
   fconfigure $fd -buffering full
   foreach name {shading.onoff shading.algorithm \
@@ -1433,13 +1432,15 @@ proc setup_styles_overlays_structure {} {
     frame $parent.frame
     pack $parent.frame -expand 1
     button $parent.frame.all -text [mc b91] -width 8 -takefocus 0 \
-	   -highlightthickness 0 -command "all_style_overlays $parent"
+	-highlightthickness 0 -command "select_style_overlays $parent all"
     tooltip $parent.frame.all [mc b91t]
     button $parent.frame.reset -text [mc b92] -width 8 -takefocus 0 \
-	   -highlightthickness 0 -command "reset_style_overlays $parent"
+	-highlightthickness 0 -command "select_style_overlays $parent default"
     tooltip $parent.frame.reset [mc b92t]
-    pack $parent.frame.all -side left
-    pack $parent.frame.reset -side right
+    button $parent.frame.none -text [mc b93] -width 8 -takefocus 0 \
+	-highlightthickness 0 -command "select_style_overlays $parent none"
+    tooltip $parent.frame.none [mc b93t]
+    pack $parent.frame.all $parent.frame.reset $parent.frame.none -side left
   }
 
   # Fill style selection, select default style
@@ -1471,26 +1472,17 @@ proc update_style_overlay {child} {
   lset ::style.table $style_index $style
 }
 
-# Select all style's overlays from theme file
+# Select style's overlays from theme file:
+# - select all overlays
+# - deselect all overlays
+# - select default overlays only
 
-proc all_style_overlays {parent} {
-  regexp {^\.overlays\.(.*?)$} $parent "" style_id
-  set style_index [lsearch -exact -index 0 ${::style.table} $style_id]
-  set style [lindex ${::style.table} $style_index]
-  set overlays [lindex $style 2]
-  foreach overlay $overlays {
-    set enabled [lindex $overlay 2]
-    if {$enabled != "true"} {
-      set overlay_id [lindex $overlay 0]
-      set child $parent.$overlay_id
-      $child invoke
-    }
+proc select_style_overlays {parent select} {
+  switch $select {
+    all		{set check {$enabled != "true"}}
+    none	{set check {$enabled == "true"}}
+    default	{set check {$enabled != $default}}
   }
-}
-
-# Reset style's lookup table entry to default overlays from theme file
-
-proc reset_style_overlays {parent} {
   regexp {^\.overlays\.(.*?)$} $parent "" style_id
   set style_index [lsearch -exact -index 0 ${::style.table} $style_id]
   set style [lindex ${::style.table} $style_index]
@@ -1498,7 +1490,7 @@ proc reset_style_overlays {parent} {
   foreach overlay $overlays {
     set enabled [lindex $overlay 2]
     set default [lindex $overlay 3]
-    if {$enabled != $default} {
+    if {[expr $check]} {
       set overlay_id [lindex $overlay 0]
       set child $parent.$overlay_id
       $child invoke
@@ -1554,8 +1546,7 @@ event generate .themes_values <<ComboboxSelected>>
 
 # Save global settings to folder ini_folder
 
-proc save_global_settings {} {
-uplevel #0 {
+proc save_global_settings {} {uplevel #0 {
   set maps.selection [lmap index [.maps_values curselection] \
 	{.maps_values get $index}]
   scan [wm geometry .] "%dx%d+%d+%d" width height x y
@@ -1577,8 +1568,7 @@ uplevel #0 {
 
 # Save application dependent settings to folder ini_folder
 
-proc save_qmapshack_settings {} {
-uplevel #0 {
+proc save_qmapshack_settings {} {uplevel #0 {
   set fd [open "$ini_folder/qmapshack.ini" w]
   fconfigure $fd -buffering full
   foreach name {tcp.interface tcp.port_srv tcp.port_ovl shading.layer} {
@@ -2021,7 +2011,7 @@ proc qms_start {} {
 
 }
 
-# Wait for complete selection or finish
+# Wait for valid selection or finish
 
 while {1} {
   vwait action
