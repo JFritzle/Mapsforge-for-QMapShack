@@ -1,3 +1,10 @@
+2023-05-17
+
+- README: Hint to hide output console for performance reason, if not needed
+- Show busy cursor while processes are starting/restarting
+- Terminate tile server version 0.19.0 and newer gracefully
+- Minor script optimizations
+
 2022-12-05
 
 - Add button to deselect all overlays
