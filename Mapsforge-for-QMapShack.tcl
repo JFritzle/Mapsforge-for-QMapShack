@@ -292,9 +292,11 @@ proc puts_console args {
   if {[info exists txt]} {
     .console.txt configure -state normal
     .console.txt insert end $txt
-    .console.txt see end
     .console.txt configure -state disabled
-    if {[winfo ismapped .console]} {update idletasks}
+    if {[winfo ismapped .console]} {
+      .console.txt see end
+      update idletasks
+    }
   } else {
     global errorCode errorInfo
     if {[catch "puts_tcl $args" msg]} {
@@ -433,15 +435,11 @@ foreach item {maps_folder themes_folder tms_folder tiles_folder} {
 set java_version 0
 set java_string "unknown"
 set command [list $java_cmd -version]
-if {$tcl_platform(os) == "Windows NT"} {
-  set rc [catch {open "| $command 2>@1" r} fd]
-} elseif {$tcl_platform(os) == "Linux"} {
-  set rc [catch {open "| $command 2>@ stdout" r} fd]
-}
+set rc [catch {open "| $command 2>@1" r} fd]
 if {$rc} {error_message "$fd" exit}
 fconfigure $fd -buffering line
 if {[gets $fd line] != -1} {
-  regsub {^.* version "(.*)".*$} $line {\1} data
+  regsub -nocase {^.* version "(.*)".*$} $line {\1} data
   set java_string $data
   if {[regsub {1\.([1-9][0-9]*)\.[0-9]?.*} $data {\1} data] > 0} {
     set java_version $data; # Oracle Java version <= 8
@@ -449,7 +447,7 @@ if {[gets $fd line] != -1} {
     set java_version $data; # Other Java versions
   }
 }
-close $fd
+catch "close $fd"
 
 # Prepend Java executable's path to PATH environment variable
 # to force same Java executable for nested Java calls
@@ -471,7 +469,7 @@ set rc [catch {open "| $command" r} fd]
 if {$rc} {error_message "$fd" exit}
 fconfigure $fd -buffering line
 while {[gets $fd line] != -1} {
-  if {![regsub {^.* version: ((?:[0-9]+\.){2}(?:[0-9]+){1}).*$} $line \
+  if {![regsub -nocase {^.* version: ((?:[0-9]+\.){2}(?:[0-9]+){1}).*$} $line \
 	{\1} data]} {continue}
   set server_string $data
   foreach item [split $data .] \
@@ -529,11 +527,16 @@ if {$tcl_platform(platform) == "windows"} {
 }
 bind .title <ButtonRelease-1> "catch {$script}"
 
+# Menu column
+
+frame .f
+pack .f
+
 # Preferred maps language (2 lowercase letters ISO_639-1 code)
 
 if {![info exists maps.language]} {set maps.language $language}
 labelframe .lang -labelanchor w -text [mc l11]
-pack .lang -expand 1 -fill x -pady 1
+pack .lang -in .f -expand 1 -fill x -pady 1
 entry .lang_value -textvariable maps.language -width 4 -justify center
 pack .lang_value -in .lang -side right
 tooltip .lang_value [mc l11t]
@@ -548,7 +551,7 @@ tooltip .lang_value [mc l11t]
 # Mapsforge renderer
 
 labelframe .renderer -labelanchor w -text [mc l12]:
-pack .renderer -expand 1 -fill x -pady 1
+pack .renderer -in .f -expand 1 -fill x -pady 1
 combobox .renderer_values -width 10 \
 	-validate key -validatecommand {return 0} \
 	-textvariable renderer.name -values {"database" "direct"}
@@ -558,13 +561,13 @@ pack .renderer_values -in .renderer -side right -anchor e -expand 1
 # Mapsforge map selection
 
 labelframe .maps_folder -labelanchor nw -text [mc l13]:
-pack .maps_folder -expand 1 -fill x -pady 1
+pack .maps_folder -in .f -expand 1 -fill x -pady 1
 entry .maps_folder_value -textvariable maps_folder \
 	-relief sunken -bd 1 -takefocus 0 -state readonly
 pack .maps_folder_value -in .maps_folder -expand 1 -fill x
 
 labelframe .maps -labelanchor nw -text [mc l14]:
-pack .maps -expand 1 -fill x -pady 1
+pack .maps -in .f -expand 1 -fill x -pady 1
 scrollbar .maps_scroll -command ".maps_values yview"
 listbox .maps_values -selectmode extended -activestyle none \
 	-takefocus 1 -exportselection 0 \
@@ -585,12 +588,12 @@ if {[llength $selection] > 0} {.maps_values see [lindex $selection 0]}
 # Append Mapsforge world map
 
 checkbutton .maps_world -text [mc l15] -variable maps.world
-pack .maps_world -expand 1 -fill x
+pack .maps_world -in .f -expand 1 -fill x
 
 # Mapsforge theme selection
 
 labelframe .themes_folder -labelanchor nw -text [mc l16]:
-pack .themes_folder -expand 1 -fill x -pady 1
+pack .themes_folder -in .f -expand 1 -fill x -pady 1
 entry .themes_folder_value -textvariable themes_folder \
 	-relief sunken -bd 1 -takefocus 0 -state readonly
 pack .themes_folder_value -in .themes_folder -expand 1 -fill x
@@ -601,7 +604,7 @@ foreach item $themes \
 set width [expr $width/[font measure TkTextFont "0"]+1]
 
 labelframe .themes -labelanchor nw -text [mc l17]:
-pack .themes -expand 1 -fill x -pady 1
+pack .themes -in .f -expand 1 -fill x -pady 1
 combobox .themes_values -width $width \
 	-validate key -validatecommand {return 0} \
 	-textvariable theme.selection -values $themes
@@ -625,19 +628,19 @@ pack .overlays_show_hide -in .styles -expand 1 -fill x -pady {2 0}
 
 checkbutton .shading_show_hide -text [mc c02] \
 	-command "show_hide_toplevel_window .shading"
-pack .shading_show_hide -expand 1 -fill x
+pack .shading_show_hide -in .f -expand 1 -fill x
 
 # Show visual rendering effects options
 
 checkbutton .effects_show_hide -text [mc c03] \
 	-command "show_hide_toplevel_window .effects"
-pack .effects_show_hide -expand 1 -fill x
+pack .effects_show_hide -in .f -expand 1 -fill x
 
 # Show server settings
 
 checkbutton .server_show_hide -text [mc c04] \
 	-command "show_hide_toplevel_window .server"
-pack .server_show_hide -expand 1 -fill x
+pack .server_show_hide -in .f -expand 1 -fill x
 
 # Action buttons
 
@@ -646,10 +649,22 @@ button .buttons.continue -text [mc b01] -width 12 -command {set action 1}
 tooltip .buttons.continue [mc b01t]
 button .buttons.cancel -text [mc b02] -width 12 -command {set action 0}
 tooltip .buttons.cancel [mc b02t]
-pack .buttons -ipady 5
 pack .buttons.continue .buttons.cancel -side left
+pack .buttons -ipady 5
 
 focus .buttons.continue
+
+proc busy_state {state} {
+  set busy {.f .buttons.continue .overlays .shading .effects .server}
+  if {$state} {
+    foreach item $busy {tk busy hold $item}
+    .buttons.continue configure -relief sunken
+  } else {
+    .buttons.continue configure -relief raised
+    foreach item $busy {tk busy forget $item}
+  }
+  update idletasks
+}
 
 # Show/hide output console window (show with saved geometry)
 
@@ -658,6 +673,7 @@ checkbutton .output -text [mc c99] \
 
 proc show_hide_console {} {
   if {${::console.show}} {
+    .console.txt see end
     if {${::console.geometry} == ""} {
       wm deiconify .console
     } else {
@@ -1450,7 +1466,7 @@ proc setup_styles_overlays_structure {} {
   .styles_values current $style_index
 
   # Show style selection
-  pack configure .styles -after .themes -expand 1 -fill x -pady 1
+  pack configure .styles -in .f -after .themes -expand 1 -fill x -pady 1
 
   # Set default overlay selection
   pack .overlays.$defaultstyle -expand 1 -fill x
@@ -1604,7 +1620,6 @@ proc incr_font_size {incr} {
 
 update
 wm positionfrom . program
-if {[tk windowingsystem] == "win32"} {wm state . normal}
 if {[info exists window.geometry]} {
   lassign ${window.geometry} x y width height
   # Adjust horizontal position if necessary
@@ -1612,8 +1627,7 @@ if {[info exists window.geometry]} {
   set x [expr min($x,[winfo vrootx .]+[winfo vrootwidth .]-$width)]
   wm geometry . +$x+$y
 }
-if {[tk windowingsystem] == "x11"} {wm state . normal}
-update idletasks
+wm deiconify .
 
 # Check selection for completeness
 
@@ -1700,11 +1714,7 @@ proc clean_mapsforge {} {
 
 proc process_start {command process} {
 
-  if {$::tcl_platform(os) == "Windows NT"} {
-    set rc [catch {open "| $command 2>@1" r} result]
-  } elseif {$::tcl_platform(os) == "Linux"} {
-    set rc [catch {open "| $command 2>@ stdout" r} result]
-  }
+  set rc [catch {open "| $command 2>@1" r} result]
   if {$rc} {
     error_message "$result" return
     after 0 {set action 0}
@@ -1724,13 +1734,12 @@ proc process_start {command process} {
 
   append mark {\[} [string toupper $process] {\]}
   fileevent $fd readable "
+	while {\[gets $fd line\] >= 0} {puts \"$mark \$line\"};
 	if {\[eof $fd\]} {
 	  close $fd;
 	  namespace delete $process;
 	  set ::action 0;
 	  puti \"[mc m52 $pid $exe]\";
-	} else {
-	  while {\[gets $fd line\] >= 0} {puts \"$mark \$line\"};
 	}"
 
 }
@@ -1805,7 +1814,7 @@ proc process_stop {process} {
     if {$rc} {putw "PowerShell ended abnormally"; putw "$result"; return}
   } elseif {$::tcl_platform(os) == "Linux"} {
     # Send WM_DELETE_WINDOW event to desktop window(s)
-    foreach item $window_ids {catch "exec wmctrl -i -c $item 2>@ stdout"}
+    foreach item $window_ids {catch "exec wmctrl -i -c $item"}
   }
 
   # Give process some time (max $count sec) to terminate itself
@@ -1975,6 +1984,8 @@ proc srv_start {srv} {
   lappend command -mxt ${::threads.max}
   lappend command -mit ${::threads.min}
 
+  if {$::server_version >= 1900} {lappend command -term}
+
   puti "[mc m54 $name] ..."
   puts "[join [lmap item $command {regsub {^(.* +.*|())$} $item {"\1"}}]]"
 
@@ -1993,7 +2004,26 @@ proc srv_start {srv} {
   after 20
   update
 
-  if {![process_running $srv]} {error_message [mc m55 $name] return}
+  if {![process_running $srv]} {error_message [mc m55 $name] return; return}
+  set ${srv}::port $port
+
+}
+
+# Mapsforge tile server stop procedure
+
+proc srv_stop {srv} {
+
+  if {$::server_version < 1900} {
+    process_kill $srv
+  } else {
+    namespace upvar $srv fd fd port port
+    fileevent $fd readable [regsub "action" [fileevent $fd readable] "{}"]
+    set url "http://127.0.0.1:${port}/terminate"
+    if {![catch {::http::geturl $url} token]} {
+      if {[::http::status $token] != "eof"} {process_kill $srv}
+      ::http::cleanup $token
+    }
+  }
 
 }
 
@@ -2027,6 +2057,7 @@ while {1} {
 
 # Start Mapsforge tile server
 
+busy_state 1
 srv_start srv
 
 # Start QMapShack (if server is running)
@@ -2036,6 +2067,7 @@ if {[process_running srv]} {
   qms_start
   srv_start ovl
 }
+busy_state 0
 
 # Wait for new selection or finish
 
@@ -2048,20 +2080,22 @@ if {![info exists action]} {vwait action}
 while {$action == 1} {
   unset action
   if {[selection_ok]} {
-    foreach item {srv ovl} {process_kill $item}
+    busy_state 1
+    foreach item {srv ovl} {srv_stop $item}
     clean_mapsforge
     write_mapsforge
     foreach item {srv ovl} {srv_start $item}
+    busy_state 0
     update idletasks
   }
   if {![info exists action]} {vwait action}
 }
 unset action
 
-# Kill Mapsforge tile server first, avoid 'sendError' exception
+# Stop Mapsforge tile server first, avoid 'sendError' exception
 
 foreach item {srv ovl} \
-  {if {[process_running $item]} {process_kill $item}}
+  {if {[process_running $item]} {srv_stop $item}}
 
 # Stop QMapShack or kill, if not terminating on request
 

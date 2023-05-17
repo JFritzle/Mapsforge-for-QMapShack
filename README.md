@@ -122,6 +122,8 @@ Screenshot of QMapShack showing Heidelberg (Germany) and using
 
 ### Hints
 
+* Output console  
+While console output of tile server and/or QMapShack can be informative and helpful to verify what is happening as well as to analyze errors, writing to console costs some performance. Therefore the console should be hidden if not needed. 
 * Built-in world map  
 Since the built-in [Mapsforge world map](https://download.mapsforge.org/maps/world/world.map) only shows the coastline, it only serves as a rough overview. Due to map's low resolution, coastlines show inaccurate at high resolution. Because the Mapsforge renderer prefers land on the world map to sea on the selected detailed local map, it may be advisable to disable the built-in world map when rendering coastal regions at high resolution.
 * Hillshading  
@@ -134,8 +136,7 @@ Activate <ins>first</ins> QMapShack's maps "Mapsforge Map" <ins>and second</ins>
 Same result can not be achieved by QMapShack's built-in hillshading
 * If QMapShack is showing rendered Mapsforge map a bit blurry, then within QMapShack  
   * first open “View -> Setup Map View” and set “Scale” to “Square”  
-  * then hit “symbol grid” button at upper right corner above and set “Projection” to “World Mercator (OSM)”
- 
+  * then hit “symbol grid” button at upper right corner above and set “Projection” to “World Mercator (OSM)” 
 
 
 
