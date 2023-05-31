@@ -187,6 +187,7 @@ bind . <Control-KP_Subtract> {incr_font_size -1}
 bind Button <Return> {%W invoke}
 bind Checkbutton <Return> {%W invoke}
 
+set dialog.wrapLength [expr [winfo screenwidth .]/2]
 foreach {name value} {
 *Button.borderWidth 2
 *Button.highlightThickness 1
@@ -198,8 +199,8 @@ foreach {name value} {
 *Checkbutton.padX 0
 *Checkbutton.padY 0
 *Checkbutton.takeFocus 1
-*Dialog.msg.wrapLength 0
-*Dialog.dtl.wrapLength 0
+*Dialog.msg.wrapLength ${dialog.wrapLength}
+*Dialog.dtl.wrapLength ${dialog.wrapLength}
 *Dialog.msg.font TkDefaultFont
 *Dialog.dtl.font TkDefaultFont
 *Label.borderWidth 1
@@ -214,7 +215,7 @@ foreach {name value} {
 *Scale.takeFocus 1
 *Scrollbar.takeFocus 0
 *TCombobox.takeFocus 1
-} {option add $name $value}
+} {eval option add $name $value}
 
 ttk::style configure TCombobox -padding 1
 
@@ -436,7 +437,7 @@ set java_version 0
 set java_string "unknown"
 set command [list $java_cmd -version]
 set rc [catch {open "| $command 2>@1" r} fd]
-if {$rc} {error_message "$fd" exit}
+if {$rc} {error_message "$command\n$fd" exit}
 fconfigure $fd -buffering line
 if {[gets $fd line] != -1} {
   regsub -nocase {^.* version "(.*)".*$} $line {\1} data
@@ -447,7 +448,8 @@ if {[gets $fd line] != -1} {
     set java_version $data; # Other Java versions
   }
 }
-catch "close $fd"
+set rc [catch "close $fd" error]
+if {$rc} {error_message "$command\n$error" exit}
 
 # Prepend Java executable's path to PATH environment variable
 # to force same Java executable for nested Java calls
@@ -466,7 +468,7 @@ set server_version 0
 set server_string "unknown"
 set command [list $java_cmd -jar $server_jar -h]
 set rc [catch {open "| $command" r} fd]
-if {$rc} {error_message "$fd" exit}
+if {$rc} {error_message "$command\n$fd" exit}
 fconfigure $fd -buffering line
 while {[gets $fd line] != -1} {
   if {![regsub -nocase {^.* version: ((?:[0-9]+\.){2}(?:[0-9]+){1}).*$} $line \
@@ -476,7 +478,8 @@ while {[gets $fd line] != -1} {
 	{set server_version [expr 100*$server_version+$item]}
   break
 }
-catch "close $fd"
+set rc [catch "close $fd" error]
+if {$rc} {error_message "$command\n$error" exit}
 
 if {$server_version < 1704 } \
 	{error_message [mc e07 $server_string 0.17.4] exit}
