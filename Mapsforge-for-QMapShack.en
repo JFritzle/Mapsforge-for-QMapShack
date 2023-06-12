@@ -34,6 +34,7 @@ e04	"Command '%s'\nset by variable '%s' is not executable"
 e05	"Folder/file '%s'\nset by variable '%s' does not exist"
 e06	"QMapShack's map & cache folders not yet defined!\nSet folders in QMapShack by 'File -> Setup Map Paths'"
 e07	"Mapsforge tile server version is '%s'.\nAt least version '%s' is required!"
+e08	"%s version cannot be determined from command output!\n\nCommand:\n%s\nOutput:\n%s"
 e11	"No Mapsforge map found"
 
 c01	"Select overlays for style"
