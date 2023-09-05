@@ -1,3 +1,10 @@
+2023-09-05
+
+- For tile server version 0.20.0 and newer: added built-in Mapsforge render themes
+  "DEFAULT" and "OSMARENDER" to list of render theme files
+- Fixed "Mapsforge Hillshading" map not available in QMapShack
+  after switching from "Hillshading on map" to "Hillshading as map"
+
 2023-08-16
 
 - Improved restart by restarting only those tile server(s) with changed settings
