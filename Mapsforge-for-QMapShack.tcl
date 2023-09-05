@@ -507,12 +507,13 @@ set maps [lsort -dictionary $maps]
 if {[llength $maps] == 0} {error_message [mc e11] exit}
 
 # Get list of available Mapsforge themes
-# and add Mapsforge built-in default theme
+# and add Mapsforge built-in themes
 
 cd $themes_folder
 set themes [find_files "" "*.xml"]
 cd $cwd
-lappend themes "(default)"
+if {$::server_version <  2000} {lappend themes "(default)"}
+if {$::server_version >= 2000} {lappend themes "(DEFAULT)" "(OSMARENDER)"}
 set themes [lsort -dictionary $themes]
 
 # --- Begin of main window
@@ -1220,10 +1221,11 @@ proc setup_styles_overlays_structure {} {
     foreach child [winfo children .overlays] {destroy $child}
   }
 
-  # Default theme has no style: nothing to do
-  # Default theme has hillshading: enable hillshading configuration
+  # Built-in themes have no style: nothing to do
+  # Built-in themes have hillshading: enable hillshading configuration
   set theme ${::theme.selection}
-  if {$theme == "(default)"} {
+  if {$theme == "(default)" || \
+      $theme == "(DEFAULT)" || $theme == "(OSMARENDER)"} {
     unset -nocomplain ::style.table ::style.theme
     if {[winfo ismapped .overlays]} {.overlays_show_hide invoke}
     .shading.onmap configure -state normal
@@ -1902,7 +1904,9 @@ proc srv_start {srv} {
     lappend command -m [join $map_list ","]
     if {${::maps.world} == 1} {lappend command -wm}
     set theme [.themes_values get]
-    if {$theme != "(default)"} {
+    if {$theme == "(DEFAULT)" || $theme == "(OSMARENDER)"} {
+      lappend command -t [string trim $theme ()]
+    } elseif {$theme != "(default)"} {
       set theme_file "$::themes_folder/$theme"
       lappend command -t $theme_file
       if {[winfo manager .styles] != ""} {
@@ -1972,6 +1976,7 @@ proc srv_start {srv} {
       return
     }
     close $fd
+    write_mapsforge $srv
     update
   }
 
@@ -2074,7 +2079,6 @@ srv_start srv
 # Start QMapShack (if server is running)
 
 if {[process_running srv]} {
-  foreach item {srv ovl} {write_mapsforge $item}
   qms_start
   srv_start ovl
 }
