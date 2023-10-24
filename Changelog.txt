@@ -1,3 +1,8 @@
+2023-10-24
+
+- For Java version >= 9, accept Java version strings according to
+  "JEP 223: New Version-String Scheme" (https://openjdk.org/jeps/223)
+
 2023-10-22
 
 - Recognize major Java version when version string doesn't have trailing zero elements
