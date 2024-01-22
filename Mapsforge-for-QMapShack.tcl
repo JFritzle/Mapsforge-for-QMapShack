@@ -24,6 +24,9 @@ set script [file normalize [info script]]
 set cwd [pwd]
 encoding system utf-8
 
+if {$tcl_version <  9.0} {set home [file normalize ~]}
+if {$tcl_version >= 9.0} {set home [file tildeexpand ~]}
+
 wm withdraw .
 
 # Required packages and procedure aliases
@@ -107,6 +110,7 @@ foreach item $list {
   if {![info exists $item]} {continue}
   set value [set $item]
   if {$value == ""} {continue}
+  if {$tcl_version >= 9.0} {set value [file tildeexpand $value]}
   if {[lsearch -exact $cmds $item] != -1} {
     set exec [auto_execok $value]
     if {$exec != ""} {set value [lindex $exec 0]}
@@ -122,7 +126,7 @@ cd $cwd
 
 # Restore saved settings from folder ini_folder
 
-if {![info exists ini_folder]} {set ini_folder [file normalize ~/.Mapsforge]}
+if {![info exists ini_folder]} {set ini_folder $home/.Mapsforge}
 file mkdir $ini_folder
 
 set maps.selection {}
@@ -398,7 +402,7 @@ if {$tcl_platform(os) == "Windows NT"} {
     if {[set $item] == ""} {unset $item}
   }
 } elseif {$tcl_platform(os) == "Linux"} {
-  set rc [catch {open ~/.config/QLandkarte/QMapShack.conf r} fd]
+  set rc [catch {open $home/.config/QLandkarte/QMapShack.conf r} fd]
   if {!$rc} {
     fconfigure $fd -encoding utf-8
     set data [split [read $fd] "\n"]
@@ -1704,7 +1708,7 @@ proc process_start {command process} {
   set ${process}::command $command
 
   set fd $result
-  fconfigure $fd -blocking 0 -buffering line
+  fconfigure $fd -blocking 0 -buffering line -encoding iso8859-1
 
   set pid [pid $fd]
   set exe [file tail [lindex $command 0]]
