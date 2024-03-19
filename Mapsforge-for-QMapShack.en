@@ -46,6 +46,7 @@ s01	"Scaling of scalable map elements"
 s02	"All elements"
 s03	"Text labels"
 s04	"Symbols"
+s05	"Lines"
 
 s06	"Color post-processing"
 s07	"Gamma correction"
