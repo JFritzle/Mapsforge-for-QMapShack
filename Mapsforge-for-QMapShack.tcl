@@ -1764,7 +1764,9 @@ proc incr_font_size {incr} {
   } else {
     set size [expr round(($height+3)*0.6)]
     set padx [expr round($size*0.3)]
-    set pady [expr round($size*0.1)]
+    if {$::tcl_platform(os) == "Windows NT"} {set pady 0.1}
+    if {$::tcl_platform(os) == "Linux"} {set pady -0.1}
+    set pady [expr round($size*$pady)]
     set margin [list 0 $pady $padx 0]
     foreach item {TCheckbutton TRadiobutton} \
 	{style configure $item -indicatorsize $size -indicatormargin $margin}
