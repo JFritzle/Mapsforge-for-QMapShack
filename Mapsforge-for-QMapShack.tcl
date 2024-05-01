@@ -193,6 +193,11 @@ Arrow.TButton bordercolor {focus $color::WindowFrame}
 foreach item {TButton TCheckbutton TRadiobutton} \
 	{bind $item <Return> {%W invoke}}
 bind TCombobox <Return> {event generate %W <Button-1>}
+proc scale_updown {w d} {$w set [expr [$w get]+$d*[$w cget -resolution]]}
+bind Scale <MouseWheel> {scale_updown %W [expr %D>0?+1:-1]}
+bind Scale <Button-4> {scale_updown %W -1}
+bind Scale <Button-5> {scale_updown %W +1}
+bind Scale <Button-1> {+focus %W}
 
 # Bitmap arrow down
 
@@ -575,6 +580,21 @@ foreach item {server_jar} {
 foreach item {maps_folder themes_folder tms_folder tiles_folder} {
   set value [set $item]
   if {![file isdirectory $value]} {error_message [mc e05 $value $item] exit}
+}
+
+# Work around Oracle's Java wrapper "java.exe" issue:
+# Wrapper requires running within real Windows console,
+# therefore not working within Tcl script called by "wish"!
+# -> Try getting Java's real path from Windows registry
+
+if {$tcl_platform(os) == "Windows NT" && 
+  ([regexp -nocase {^.*/Program Files.*/Common Files/Oracle/Java/.*/java.exe$} $java_cmd]
+   || [regexp -nocase {^.*/ProgramData/Oracle/Java/.*/java.exe$} $java_cmd])} {
+  if {![catch {registry get "HKEY_LOCAL_MACHINE\\SOFTWARE\\JavaSoft\\Java Runtime Environment" CurrentVersion} value] &&
+      ![catch {registry get "HKEY_LOCAL_MACHINE\\SOFTWARE\\JavaSoft\\Java Runtime Environment\\$value" JavaHome} value]} {
+    set exec [auto_execok "[file normalize $value]/bin/java.exe"]
+    if {$exec != ""} {set java_cmd [lindex $exec 0]}
+  }
 }
 
 # Get major Java version
@@ -1743,19 +1763,7 @@ proc incr_font_size {incr} {
   if {$size < 5 || $size > 20} {return}
   set fonts {TkDefaultFont TkTextFont TkFixedFont TkTooltipFont title_font}
   foreach item $fonts {font configure $item -size $size}
-  update idletasks
-  # Repeating for correct widget geometry!
-  foreach item $fonts {font configure $item -size $size}
   set height [expr [winfo reqheight .title]-2]
-
-  foreach item {.renderer_values .themes_values .styles_values \
-	.shading.algorithm_values \
-	.server.engine_values .server.interface_values} \
-	{catch "$item current [$item current]"}
-  foreach item {.effects.user_scale .effects.text_scale \
-	.effects.symbol_scale .effects.line_scale \
-	.effects.gamma_scale .effects.contrast_scale} \
-	{catch "$item configure -width $height"}
 
   if {$::tcl_version > 8.6} {
     set scale [expr ($height+2)*0.0065]
@@ -1772,6 +1780,15 @@ proc incr_font_size {incr} {
 	{style configure $item -indicatorsize $size -indicatormargin $margin}
   }
   update idletasks
+
+  foreach item {.renderer_values .themes_values .styles_values \
+	.shading.algorithm_values \
+	.server.engine_values .server.interface_values} \
+	{if {[winfo exists $item]} {$item configure -justify left}}
+  foreach item {.effects.user_scale .effects.text_scale \
+	.effects.symbol_scale .effects.line_scale \
+	.effects.gamma_scale .effects.contrast_scale} \
+	{if {[winfo exists $item]} {$item configure -width $height}}
 }
 
 # Check selection for completeness
