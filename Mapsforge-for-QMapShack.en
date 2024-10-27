@@ -36,6 +36,7 @@ e06	"QMapShack's map & cache folders not yet defined!\nSet folders in QMapShack 
 e07	"Mapsforge tile server version is '%s'.\nAt least version '%s' is required!"
 e08	"%s version cannot be determined from command output!\n\nCommand:\n%s\nOutput:\n%s"
 e11	"No Mapsforge map found"
+e15	"Server configuration file '%s' in folder\n'%s'\ndoes not exist"
 
 c01	"Select overlays for style"
 c02	"Configure hillshading"
@@ -64,9 +65,10 @@ x15	"TCP port"
 x16	"TCP accept queue size"
 x17	"Minimum concurrent threads"
 x18	"Maximum concurrent threads"
+x19	"Logging of server requests"
 
 b01	"Start"
-b01t	"Activate map 'Mapsforge Map' in\nQMapShack. After changing settings\npress this 'Start' button again,\nthen right-click QMapShack's maps list\nand force QMapShack to reload maps!"
+b01t	"Activate map 'Mapsforge Map' in\nQMapShack. After changing settings\npress this 'Start' button again,\nthen right-click QMapShack's maps list\nand force QMapShack to reload maps!\nDouble click forces a server restart."
 b02	"Quit"
 b02t	"Terminate QMapShack and quit"
 

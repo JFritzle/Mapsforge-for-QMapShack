@@ -36,6 +36,7 @@ e06	"Karten- & Kachelordner von QMapShack noch nicht definiert!\nSetze Ordner in
 e07	"Mapsforge Tile Server-Version ist '%s'.\nMindestens Version '%s' ist erforderlich!"
 e08	"%s-Version kann nicht aus der Befehlsausgabe bestimmt werden!\n\nBefehl:\n%s\nAusgabe:\n%s"
 e11	"Keine Mapsforge-Karte gefunden"
+e15	"Server-Konfigurationsdatei '%s' in Ordner\n'%s'\nexistiert nicht"
 
 c01	"Overlays zum Stil auswählen"
 c02	"Schummerung konfigurieren"
@@ -64,9 +65,10 @@ x15	"TCP-Port"
 x16	"Größe der TCP-Accept-Queue"
 x17	"Minimum gleichzeitiger Threads"
 x18	"Maximum gleichzeitiger Threads"
+x19	"Logging von Server-Requests"
 
 b01	"Starten"
-b01t	"Karte 'Mapsforge Map' in QMapShack\naktivieren. Nach Änderung von Einstellungen\ndiesen Knopf 'Starten' erneut drücken,\ndann Kartenliste in QMapShack rechtsklicken\nund QMapShack-Karten erneut laden!"
+b01t	"Karte 'Mapsforge Map' in QMapShack\naktivieren. Nach Änderung von Einstellungen\ndiesen Knopf 'Starten' erneut drücken,\ndann Kartenliste in QMapShack rechtsklicken\nund QMapShack-Karten erneut laden!\nDoppelklick erzwingt einen Serverneustart."
 b02	"Beenden"
 b02t	"QMapShack schließen und beenden"
 
@@ -114,50 +116,3 @@ m99	"Ausgabe-Konsole kann jetzt geschlossen werden!"
 
 };	# Do not remove: end of translations
 	# Do not remove: end of file (Ctrl+Z)
-
-# -- Beschreibung der Skript-Variablen ----------------------------------------
-#
-# ini_folder
-#   Absoluter oder relativer Pfad des Ordners
-#   zum Sichern/Wiederherstellen der Einstellungen
-# qms_cmd
-#   Befehl um QMapShack von der Befehlszeile aufzurufen
-#   Entweder absoluter oder relativer Pfad der QMapShack-Programmdatei (.exe)
-#   oder Name der QMapShack-Programmdatei, falls über den Suchpfad gefunden
-# qms_args
-#   Weitere optionale QMapShack-Argumente
-# maps_folder
-#   Absoluter oder relativer Pfad des Ordners, rekursiv durchsucht
-#   nach Mapsforge-Karten mit Endung .map durchsucht
-# themes_folder
-#   Absoluter oder relativer Pfad des Ordners, rekursiv durchsucht
-#   nach Mapsforge-Themen mit Endung .xml durchsucht
-# java_cmd
-#   Befehl um Java von der Befehlszeile aufzurufen
-#   Entweder absoluter oder relativer Pfad der Java-Programmdatei (.exe)
-#   oder Name der Java-Programmdatei, falls über den Suchpfad gefunden
-# java_args
-#   Weitere optionale Java-Argumente
-# server_jar
-#   Absoluter oder relativer Pfad des Mapsforge Tile Servers Java-Archiv (.jar)
-#   mapsforgesrv4java8.jar  ... für Java version 8 (oder höher)
-#   mapsforgesrv-fatjar.jar ... für Java version 11 oder höher
-# min_zoom_level
-#   Minimum Zoom-Stufe (Zoom-Stufe 1 = QMapShack kleinster Maßstab 10 m)
-# max_zoom_level
-#   Maximum Zoom-Stufe (Zoom-Stufe 17 = QMapShack größter Maßstab 1000 km)
-# tile_size
-#   Pixel einer Kachel je Richtung, wird zur Ausgabe auf 256 Pixel skaliert
-#   (Default: 256, d.h. keine Pixel-Skalierung erforderlich)
-# language
-#   Bevorzugte Mapsforge-Kartensprache (2 Kleinbuchstaben ISO 639-1 Code)
-#   (z.B. "en", "fr", "de" etc. oder "" für Mapsforge-Defaultsprache)
-# tcp_port
-#   TCP-Port für Kommunikation zwischen Mapsforge Tile Server und QMapShack
-#   (1024 <= Port <= 65535)
-# interface
-#   Netzwerk-Interface des Mapsforge Tile Servers für eingehende Anfragen
-#   "localhost" ... Höre nur auf IPv4-Loopback-Interface & Adresse 127.0.0.1
-#   "all"       ... Höre auf alle Netwerk-Interfaces
-#
-# -- Ende der Beschreibung ----------------------------------------------------
