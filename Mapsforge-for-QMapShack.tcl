@@ -1908,7 +1908,7 @@ proc process_start {command process} {
   set result [send $tid "set result"]
 
   if {$rc} {
-    thread::cancel $tid
+    thread::release $tid
     error_message "$result" return
     after 0 {set action 0}
     return
@@ -1933,7 +1933,7 @@ proc process_start {command process} {
       cputs \"\\$mark \$line\"
     }
     if {\[eof $fd\]} {
-      thread::cancel $tid
+      thread::release $tid
       namespace delete $process
       cputi \"\[mc m52 $pid $exe\] \\$mark\"
       set $process.eof 1
@@ -2189,7 +2189,7 @@ proc srv_start {srv} {
     lappend params contrast-stretch ${::maps.contrast}
     lappend params text-scale ${::text.scale}
     lappend params symbol-scale ${::symbol.scale}
-    lappend params text-scale ${::user.scale}
+    lappend params user-scale ${::user.scale}
     if {$::server_version >= 210000} {lappend params line-scale ${::line.scale}}
   } elseif {$srv == "ovl" && $::server_type == 0} {
     lappend params mapfiles ""
@@ -2435,6 +2435,9 @@ foreach item {srv ovl} {srv_stop $item}
 
 qms_stop
 if {[process_running qms]} {process_kill qms}
+
+# Linux: work-around forcing Tcl to clean up it's background zombie processes
+catch "exec /bin/true"
 
 # Delete file Mapsforge tms file(s) and tile cache folder(s)
 # Delete temporary files folder
