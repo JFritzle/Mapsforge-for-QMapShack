@@ -36,7 +36,6 @@ e06	"QMapShack's map & cache folders not yet defined!\nSet folders in QMapShack 
 e07	"Mapsforge tile server version is '%s'.\nAt least version '%s' is required!"
 e08	"%s version cannot be determined from command output!\n\nCommand:\n%s\nOutput:\n%s"
 e11	"No Mapsforge map found"
-e15	"Server configuration file '%s' in folder\n'%s'\ndoes not exist"
 
 c01	"Select overlays for style"
 c02	"Configure hillshading"
@@ -102,6 +101,10 @@ l84	"Linearity"
 l85	"Scale"
 l86	"Height angle of light source"
 l87	"Gray value magnitude scaling"
+l880	"Asymmetry factor"
+l881	"Minimum slope"
+l882	"Maximum slope"
+l885	"High quality"
 
 b91	"All"
 b91t	"Select all"

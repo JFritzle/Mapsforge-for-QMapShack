@@ -36,7 +36,6 @@ e06	"Karten- & Kachelordner von QMapShack noch nicht definiert!\nSetze Ordner in
 e07	"Mapsforge Tile Server-Version ist '%s'.\nMindestens Version '%s' ist erforderlich!"
 e08	"%s-Version kann nicht aus der Befehlsausgabe bestimmt werden!\n\nBefehl:\n%s\nAusgabe:\n%s"
 e11	"Keine Mapsforge-Karte gefunden"
-e15	"Server-Konfigurationsdatei '%s' in Ordner\n'%s'\nexistiert nicht"
 
 c01	"Overlays zum Stil auswählen"
 c02	"Schummerung konfigurieren"
@@ -102,6 +101,10 @@ l84	"Linearität"
 l85	"Skalierung"
 l86	"Höhenwinkel der Lichtquelle"
 l87	"Skalierung der Grauwertgröße"
+l880	"Asymmetriefaktor"
+l881	"Minimale Neigung"
+l882	"Maximale Neigung"
+l885	"Hohe Qualität"
 
 b91	"Alle"
 b91t	"Alles auswählen"

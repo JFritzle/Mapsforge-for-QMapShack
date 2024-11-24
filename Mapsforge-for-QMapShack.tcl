@@ -298,6 +298,57 @@ foreach item $list {
 
 cd $cwd
 
+
+# Check if QMapShack already running
+# and check operating system
+
+if {$tcl_platform(os) == "Windows NT"} {
+  set exe [file tail $qms_cmd]
+  catch {exec TASKLIST /NH /FO CSV /FI "IMAGENAME eq $exe" \
+	/FI "USERNAME eq $tcl_platform(user)"} result
+  set result [split $result ","]
+  if {[llength $result] == 5} {
+    eval set pid [lindex $result 1]
+    set rc [messagebox -title $title -type yesno -default no -icon question \
+	-message [mc e01 "QMapShack" $exe $pid] -detail [mc e02]]
+    if {$rc == "no"} {exit}
+    catch {exec TASKKILL /F /PID $pid}
+  }
+  if {$language == ""} {
+    package require registry
+    set language [registry get \
+	{HKEY_CURRENT_USER\Control Panel\International} {LocaleName}]
+    set language [regsub {(.*)-(.*)} $language {\1}]
+  }
+  if {![info exists env(TMP)]} {set env(TMP) $env(HOME)]}
+  set tmpdir [file normalize $env(TMP)]
+  set nprocs $env(NUMBER_OF_PROCESSORS)
+} elseif {$tcl_platform(os) == "Linux"} {
+  set exe [file tail $qms_cmd]
+  set rc [catch {exec pgrep -n -u $tcl_platform(user) $exe} result]
+  if {$rc == 0} {
+    set pid $result
+    set rc [messagebox -title $title -type yesno -default no -icon question \
+	-message [mc e01 "QMapShack" $exe $pid] -detail [mc e02]]
+    if {$rc == "no"} {exit}
+    catch {exec kill -SIGTERM $pid}
+  }
+  if {$language == ""} {
+    set language [regsub {(.*)_(.*)} $env(LANG) {\1}]
+    if {$env(LANG) == "C"} {set language "en"}
+  }
+  if {![info exists env(TMPDIR)]} {set env(TMPDIR) /tmp}
+  set tmpdir $env(TMPDIR)
+  set nprocs [exec /usr/bin/nproc]
+} else {
+  error_message [mc e03 $tcl_platform(os)] exit
+}
+
+# Trying to force map application to use X11 instead of Wayland protocol
+# to be able to handle X11 events, in particular WM_DELETE_WINDOW
+
+if {[tk windowingsystem] == "x11"} {set env(GDK_BACKEND) x11}
+
 # Restore saved settings from folder ini_folder
 
 if {![info exists ini_folder]} {set ini_folder $env(HOME)/.Mapsforge}
@@ -316,14 +367,15 @@ set console.show 0
 set console.geometry ""
 set console.font.size 8
 
+set dem.folder ""
 set shading.onoff 0
 set shading.layer "onmap"
+set shading.magnitude 1.
 set shading.algorithm "simple"
 set shading.simple.linearity 0.1
 set shading.simple.scale 0.666
 set shading.diffuselight.angle 50.
-set shading.magnitude 1.
-set dem.folder ""
+set shading.asy.values [list 0.5 0 80 [expr max(1,$nprocs/3)] $nprocs true]
 
 set tcp_port_srv $tcp_port
 set tcp_port_ovl [incr tcp_port]
@@ -347,6 +399,8 @@ foreach item {global hillshading qmapshack} {
   }
   close $fd
 }
+array set shading.asy.array {}
+set i 0; lmap v ${shading.asy.values} {set shading.asy.array($i) $v; incr i}
 
 # Restore saved font sizes
 
@@ -487,54 +541,6 @@ proc error_message {message exit_return} {
 proc get_shell_command {command} {
   return [join [lmap item $command {regsub {^(.* +.*|())$} $item {"\1"}}]]
 }
-
-# Check if QMapShack already running
-# and check operating system
-
-if {$tcl_platform(os) == "Windows NT"} {
-  set exe [file tail $qms_cmd]
-  catch {exec TASKLIST /NH /FO CSV /FI "IMAGENAME eq $exe" \
-	/FI "USERNAME eq $tcl_platform(user)"} result
-  set result [split $result ","]
-  if {[llength $result] == 5} {
-    eval set pid [lindex $result 1]
-    set rc [messagebox -title $title -type yesno -default no -icon question \
-	-message [mc e01 "QMapShack" $exe $pid] -detail [mc e02]]
-    if {$rc == "no"} {exit}
-    catch {exec TASKKILL /F /PID $pid}
-  }
-  if {$language == ""} {
-    package require registry
-    set language [registry get \
-	{HKEY_CURRENT_USER\Control Panel\International} {LocaleName}]
-    set language [regsub {(.*)-(.*)} $language {\1}]
-  }
-  if {![info exists env(TMP)]} {set env(TMP) $env(HOME)]}
-  set tmpdir [file normalize $env(TMP)]
-} elseif {$tcl_platform(os) == "Linux"} {
-  set exe [file tail $qms_cmd]
-  set rc [catch {exec pgrep -n -u $tcl_platform(user) $exe} result]
-  if {$rc == 0} {
-    set pid $result
-    set rc [messagebox -title $title -type yesno -default no -icon question \
-	-message [mc e01 "QMapShack" $exe $pid] -detail [mc e02]]
-    if {$rc == "no"} {exit}
-    catch {exec kill -SIGTERM $pid}
-  }
-  if {$language == ""} {
-    set language [regsub {(.*)_(.*)} $env(LANG) {\1}]
-    if {$env(LANG) == "C"} {set language "en"}
-  }
-  if {![info exists env(TMPDIR)]} {set env(TMPDIR) /tmp}
-  set tmpdir $env(TMPDIR)
-} else {
-  error_message [mc e03 $tcl_platform(os)] exit
-}
-
-# Trying to force map application to use X11 instead of Wayland protocol
-# to be able to handle X11 events, in particular WM_DELETE_WINDOW
-
-if {[tk windowingsystem] == "x11"} {set env(GDK_BACKEND) x11}
 
 # Get QMapShack's cache & map folder paths
 
@@ -691,8 +697,9 @@ if {[llength $maps] == 0} {error_message [mc e11] exit}
 cd $themes_folder
 set themes [find_files "" "*.xml"]
 cd $cwd
-if {$::server_version <  200000} {lappend themes "(default)"}
-if {$::server_version >= 200000} {lappend themes "(DEFAULT)" "(OSMARENDER)"}
+if {$server_version <  200000} {lappend themes "(default)"}
+if {$server_version >= 200000} {lappend themes "(DEFAULT)" "(OSMARENDER)"}
+if {$server_version >= 220000} {lappend themes "(MOTORIDER)" "(MOTORIDER_DARK)"}
 set themes [lsort -dictionary $themes]
 
 # --- Begin of main window
@@ -1020,55 +1027,78 @@ proc choose_dem_folder {} {
 
 labelframe .shading.algorithm -labelanchor w -text [mc l83]:
 pack .shading.algorithm -expand 1 -fill x -pady 2
-combobox .shading.algorithm_values -width 12 \
+set list {"simple" "diffuselight"}
+if {$server_version >= 220000} {lappend list "stdasy" "simplasy" "hiresasy"}
+combobox .shading.algorithm.values -width 12 \
 	-validate key -validatecommand {return 0} \
-	-textvariable shading.algorithm -values {"simple" "diffuselight"}
-if {[.shading.algorithm_values current] < 0} \
-	{.shading.algorithm_values current 0}
-pack .shading.algorithm_values -in .shading.algorithm \
+	-textvariable shading.algorithm -values $list
+if {[.shading.algorithm.values current] < 0} \
+	{.shading.algorithm.values current 0}
+pack .shading.algorithm.values -in .shading.algorithm \
 	-side right -anchor e -expand 1
 
 # Hillshading algorithm parameters
 
 labelframe .shading.simple -labelanchor w -text [mc l84]:
-entry .shading.simple_value1 -textvariable shading.simple.linearity \
+entry .shading.simple.value1 -textvariable shading.simple.linearity \
 	-width 8 -justify right
-set .shading.simple_value1.minmax {0 1 0.1}
-tooltip .shading.simple_value1 "0 ≤ [mc l84] ≤ 1"
-label .shading.simple_label2 -text [mc l85]:
-entry .shading.simple_value2 -textvariable shading.simple.scale \
+set .shading.simple.value1.minmax {0 1 0.1}
+tooltip .shading.simple.value1 "0 ≤ [mc l84] ≤ 1"
+label .shading.simple.label2 -text [mc l85]:
+entry .shading.simple.value2 -textvariable shading.simple.scale \
 	-width 8 -justify right
-set .shading.simple_value2.minmax {0 10 0.666}
-tooltip .shading.simple_value2 "0 ≤ [mc l85] ≤ 10"
-pack .shading.simple_value1 .shading.simple_label2 .shading.simple_value2 \
+set .shading.simple.value2.minmax {0 10 0.666}
+tooltip .shading.simple.value2 "0 ≤ [mc l85] ≤ 10"
+pack .shading.simple.value1 .shading.simple.label2 .shading.simple.value2 \
 	-in .shading.simple -side left -anchor w -expand 1 -fill x -padx {5 0}
 
 labelframe .shading.diffuselight -labelanchor w -text [mc l86]:
-entry .shading.diffuselight_value -textvariable shading.diffuselight.angle \
+entry .shading.diffuselight.value -textvariable shading.diffuselight.angle \
 	-width 8 -justify right
-set .shading.diffuselight_value.minmax {0 90 50.}
-tooltip .shading.diffuselight_value "0° ≤ [mc l86] ≤ 90°"
-pack .shading.diffuselight_value -in .shading.diffuselight \
+set .shading.diffuselight.value.minmax {0 90 50.}
+tooltip .shading.diffuselight.value "0° ≤ [mc l86] ≤ 90°"
+pack .shading.diffuselight.value -in .shading.diffuselight \
 	-side right -anchor e -expand 1
 
+frame .shading.asy
+foreach i {0 1 2} {
+  label .shading.asy.label$i -anchor w -text [mc l88$i]:
+  entry .shading.asy.value$i -textvariable shading.asy.array($i) \
+	-width 8 -justify right
+  grid .shading.asy.label$i -row $i -column 1 -sticky w -padx {0 2}
+  grid .shading.asy.value$i -row $i -column 2 -sticky e
+}
+set .shading.asy.value0.minmax {0 1 0.5}
+tooltip .shading.asy.value0 "0 ≤ [mc l880] ≤ 1"
+set .shading.asy.value1.minmax {0 99 0}
+tooltip .shading.asy.value1 "0 ≤ [mc l881] < [mc l882] %"
+set .shading.asy.value2.minmax {1 100 80}
+tooltip .shading.asy.value2 "0 < [mc l882] ≤ 100 %"
+checkbutton .shading.asy.hq -text [mc l885] -variable shading.asy.array(5) \
+	-onvalue true -offvalue false
+grid .shading.asy.hq -row 4 -column 1 -columnspan 2 -sticky we
+grid columnconfigure .shading.asy 1 -weight 1
+
 proc switch_shading_algorithm {} {
-  catch "pack forget .shading.simple .shading.diffuselight"
-  pack .shading.${::shading.algorithm} -after .shading.algorithm \
+  catch "pack forget .shading.simple .shading.diffuselight .shading.asy"
+  set widget ${::shading.algorithm}
+  if {[regexp {asy$} $widget]} {set widget asy}
+  pack .shading.$widget -after .shading.algorithm \
 	-expand 1 -fill x -pady 1
 }
 
-bind .shading.algorithm_values <<ComboboxSelected>> switch_shading_algorithm
+bind .shading.algorithm.values <<ComboboxSelected>> switch_shading_algorithm
 switch_shading_algorithm
 
 # Hillshading magnitude
 
 labelframe .shading.magnitude -labelanchor w -text [mc l87]:
 pack .shading.magnitude -expand 1 -fill x
-entry .shading.magnitude_value -textvariable shading.magnitude \
+entry .shading.magnitude.value -textvariable shading.magnitude \
 	-width 8 -justify right
-set .shading.magnitude_value.minmax {0 4 1.}
-tooltip .shading.magnitude_value "0 ≤ [mc l87] ≤ 4"
-pack .shading.magnitude_value -in .shading.magnitude -anchor e -expand 1
+set .shading.magnitude.value.minmax {0 4 1.}
+tooltip .shading.magnitude.value "0 ≤ [mc l87] ≤ 4"
+pack .shading.magnitude.value -in .shading.magnitude -anchor e -expand 1
 
 # Reset hillshading algorithm parameters
 
@@ -1077,15 +1107,25 @@ tooltip .shading.reset [mc b92t]
 pack .shading.reset -pady {5 0}
 
 proc reset_shading_values {} {
-  foreach widget {.shading.simple_value1 .shading.simple_value2 \
-		  .shading.diffuselight_value .shading.magnitude_value} {
+  set list {.shading.simple.value1 .shading.simple.value2 \
+	    .shading.diffuselight.value .shading.magnitude.value}
+  foreach i {0 1 2} {lappend list .shading.asy.value$i}
+  foreach widget $list {
     set ::[$widget cget -textvariable] [lindex [set ::$widget.minmax] 2]
   }
+  set ::shading.asy.array(5) true
 }
 
-foreach widget {.shading.simple_value1 .shading.simple_value2 \
-		.shading.diffuselight_value .shading.magnitude_value} {
+foreach widget {.shading.simple.value1 .shading.simple.value2 \
+	.shading.diffuselight.value .shading.magnitude.value \
+	.shading.asy.value0} {
   $widget configure -validate all -vcmd {validate_number %W %V %P " " "float"}
+  bind $widget <Shift-ButtonRelease-1> \
+	{set [%W cget -textvariable] [lindex ${::%W.minmax} 2]}
+}
+
+foreach widget {.shading.asy.value1 .shading.asy.value2} {
+  $widget configure -validate all -vcmd {validate_number %W %V %P " " "int"}
   bind $widget <Shift-ButtonRelease-1> \
 	{set [%W cget -textvariable] [lindex ${::%W.minmax} 2]}
 }
@@ -1093,10 +1133,12 @@ foreach widget {.shading.simple_value1 .shading.simple_value2 \
 # Save hillshading settings to folder ini_folder
 
 proc save_shading_settings {} {uplevel #0 {
+  lmap {i v} [array get shading.asy.array] {lset shading.asy.values $i $v}
   set fd [open "$ini_folder/hillshading.ini" w]
   foreach name {shading.onoff shading.algorithm \
 	shading.simple.linearity shading.simple.scale \
-	shading.diffuselight.angle shading.magnitude dem.folder} {
+	shading.diffuselight.angle shading.asy.values \
+	shading.magnitude dem.folder} {
     puts $fd "$name=[set $name]"
   }
   close $fd
@@ -1418,8 +1460,7 @@ proc setup_styles_overlays_structure {} {
   # Built-in themes have no style: nothing to do
   # Built-in themes have hillshading: enable hillshading configuration
   set theme ${::theme.selection}
-  if {$theme == "(default)" || \
-      $theme == "(DEFAULT)" || $theme == "(OSMARENDER)"} {
+  if {[regexp {^\(.*\)$} $theme]} {
     unset -nocomplain ::style.table ::style.theme
     if {[winfo ismapped .overlays]} {.overlays_show_hide invoke}
     .shading.onmap configure -state normal
@@ -2173,9 +2214,10 @@ proc srv_start {srv} {
     lappend params mapfiles [join $map_list ,]
     if {${::maps.world} == 1} {lappend params worldmap true}
     set theme [.themes_values get]
-    if {$theme == "(DEFAULT)" || $theme == "(OSMARENDER)"} {
-      lappend params themefile) [string trim $theme ()]
-    } elseif {$theme != "(default)"} {
+    if {$theme == "(default)"} {
+    } elseif {[regexp {^\(.*\)$} $theme]} {
+      lappend params themefile [string trim $theme ()]
+    } else {
       set theme_file "$::themes_folder/$theme"
       lappend params themefile $theme_file
       if {[winfo manager .styles] != ""} {
@@ -2203,10 +2245,15 @@ proc srv_start {srv} {
       if {$linearity == ""} {set linearity 0.1}
       if {$scale == ""} {set scale 0.666}
       lappend params hillshading-algorithm "$algorithm\($linearity,$scale\)"
-    } else {
+    } elseif {$algorithm == "diffuselight"} {
       set angle ${::shading.diffuselight.angle}
       if {$angle == ""} {set angle 50.}
       lappend params hillshading-algorithm "$algorithm\($angle\)"
+    } elseif {[regexp {asy$} $algorithm]} {
+      lmap {i v} [array get ::shading.asy.array] \
+	{lset ::shading.asy.values $i $v}
+      set values [join ${::shading.asy.values} ,]
+      lappend params hillshading-algorithm "$algorithm\($values\)"
     }
     set magnitude ${::shading.magnitude}
     if {$magnitude == ""} {set magnitude 1.}
@@ -2259,10 +2306,12 @@ proc srv_start {srv} {
     }
 
     if {$srv == "ovl"} {return}
-
   }
 
-  if {[process_running $srv]} {return}
+  if {[process_running $srv]} {
+    if {$command == [set ${srv}::command]} {return}
+    srv_stop $srv
+  }
 
   append name " Server \[[string toupper $srv]\]"
   # Server not yet running: TCP port is currently in use?
@@ -2376,7 +2425,7 @@ while {1} {
 
 # Create server's temporary files folder
 
-append tmpdir /[format "TCL%8.8x" [pid]]
+append tmpdir /[format "MTS%8.8x" [pid]]
 file mkdir $tmpdir
 
 # Create server logging properties
@@ -2469,7 +2518,8 @@ if {[send $ctid "winfo ismapped ."]} {
 
 destroy .
 
-# Let Windows OS remove remaining temporary folder after some delay
+# Let Windows OS remove remaining temporary TCL folder after some delay
+regsub {MTS} $tmpdir {TCL} tmpdir
 if {$tcl_platform(os) == "Windows NT" && [file isdirectory $tmpdir]} {
   regsub -all {/} $tmpdir {\\\\} tmp
   exec cmd.exe /C "TIMEOUT /T 1 /NOBREAK > NUL & RMDIR /S /Q $tmp" &
