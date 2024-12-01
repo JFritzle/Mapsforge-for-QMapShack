@@ -10,6 +10,7 @@ While old tile server type is capable of rendering only one single set of parame
 
 Section [Mapsforge Maps](https://github.com/Maproom/qmapshack/wiki/DocBasicsMapDem#user-content-mapsforge-maps) of QMapShack’s wiki shortly describes how to set up an old type tile server and manually connect it to QMapShack by an appropriate TMS file. 
 
+
 ### Graphical user interface
 This project’s intension is to easily let the user interactively and comfortably select the numerous available options of tile server. In addition, option settings as well as position and font size of graphical user interface automatically get saved and restored. Tile server and QMapShack get started/restarted using these options without need to manually set up any configuration files. 
 
@@ -21,6 +22,9 @@ Resource files are named _Mapsforge-for-QMapShack.<locale\>_, where _<locale\>_ 
 
 Screenshot of graphical user interface: 
 ![GUI](https://github.com/JFritzle/Mapsforge-for-QMapShack/assets/62614244/bc890a22-a5e6-45a1-8a3c-853ca6d3dc13)
+
+Please note:  
+Old tile server type has reached end of life and version 0.21.4 is last version released. Further development only takes place on new "tasks" server type. After some grace period, graphical user interface support for the old server type will be dropped. Therefore, an early switch to the new server type is recommended.   
 
 ### Installation
 

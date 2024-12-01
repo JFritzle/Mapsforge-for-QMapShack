@@ -344,10 +344,10 @@ if {$tcl_platform(os) == "Windows NT"} {
   error_message [mc e03 $tcl_platform(os)] exit
 }
 
-# Trying to force map application to use X11 instead of Wayland protocol
+# Trying to force Qt application QMapShack to use XCB instead of Wayland
 # to be able to handle X11 events, in particular WM_DELETE_WINDOW
 
-if {[tk windowingsystem] == "x11"} {set env(GDK_BACKEND) x11}
+if {[tk windowingsystem] == "x11"} {set env(QT_QPA_PLATFORM) "xcb;wayland"}
 
 # Restore saved settings from folder ini_folder
 
@@ -387,8 +387,8 @@ set threads.min 0
 set threads.max 8
 set log.requests 1
 
-set tms_name_srv "Mapsforge Map"
-set tms_name_ovl "Mapsforge Hillshading"
+set name_srv "Map"
+set name_ovl "Hillshading"
 
 foreach item {global hillshading qmapshack} {
   set fd [open "$ini_folder/$item.ini" a+]
@@ -946,8 +946,8 @@ proc position_toplevel_window {widget} {
     if {[auto_execok xwininfo] == ""} {
       cputw "Please install program 'xwininfo' by Linux package manager"
       cputw "to evaluate exact window border width."
-    } elseif {![catch "exec bash -c \"export LANG=C;xwininfo -id [wm frame .] \
-	| grep Width | cut -d: -f2\"" wmwidth]} {
+    } elseif {![catch {exec bash -c "export LANG=C;xwininfo -id [wm frame .] \
+	| grep Width | cut -d: -f2"} wmwidth]} {
       set bdwidth [expr ($wmwidth-$width)/2]
       set width $wmwidth
     }
@@ -1863,7 +1863,7 @@ proc selection_ok {} {
 
 proc write_mapsforge {srv} {
 
-  set name [set ::tms_name_$srv]
+  set name "Mapsforge [set ::name_$srv]"
   if {$::server_type == 0} {set port [set ::tcp.port_$srv]} \
   elseif {$::server_type == 1} {set port [set ::tcp.port_srv]}
 
@@ -1915,7 +1915,7 @@ proc write_mapsforge {srv} {
 
 proc clean_mapsforge {srv} {
 
-  set name [set ::tms_name_$srv]
+  set name "Mapsforge [set ::name_$srv]"
   set cache "$::tiles_folder/$name"
   if {[file exists $cache]} {
     cputi "[mc m60 $cache] ..."
@@ -2013,7 +2013,7 @@ proc qms_stop {} {
       set window_ids [read $fd]
       close $fd
     }
-    catch "file delete $tmp.log"
+    file delete $tmp.log
   } elseif {$::tcl_platform(os) == "Linux"} {
     if {[auto_execok wmctrl] == ""} {
       cputw "Please install program 'wmctrl' by Linux package manager"
@@ -2021,13 +2021,13 @@ proc qms_stop {} {
       return
     }
     # Search desktop windows of process and children
-    set rc [catch "exec pgrep -P $pid" list]
+    set rc [catch {exec pgrep -P $pid} list]
     if {$rc} {set list $pid} else {lappend list $pid}
     foreach item $list {
       set rc [catch {open "| wmctrl -l -p | grep \" $item \"" r} result]
       if {$rc != 0} {continue}
       while {[gets $result line] != -1} {lappend window_ids [lindex $line 0]}
-      catch "close $result"
+      catch {close $result}
     }
   }
 
@@ -2054,7 +2054,7 @@ proc qms_stop {} {
     if {$rc} {cputw "PowerShell ended abnormally"; cputw "$result"; return}
   } elseif {$::tcl_platform(os) == "Linux"} {
     # Send WM_DELETE_WINDOW event to desktop window(s)
-    foreach item $window_ids {catch "exec wmctrl -i -c $item"}
+    foreach item $window_ids {catch {exec wmctrl -i -c $item}}
   }
 
   # Give process some time (max $count sec) to terminate itself
@@ -2098,6 +2098,9 @@ proc process_running {process} {
 
 proc srv_start {srv} {
 
+  set port [set ::tcp.port_$srv]
+  set name [set ::name_$srv]
+
   # Map or hillshading?
 
   set shading ${::shading.onoff}
@@ -2107,93 +2110,89 @@ proc srv_start {srv} {
     if {!${::shading.onoff} || ${::shading.layer} == "onmap"} {
       srv_stop ovl
       clean_mapsforge ovl
-      unset -nocomplain ::tms_md5_ovl
+      unset -nocomplain ::md5_ovl
+      file delete $::tmpdir/tasks/$name.properties
       return
     }
     # No hillshading without map
     if {![process_running srv]} {return}
   }
 
-  if {[set ::tms_restart_$srv]} {srv_stop $srv}
+  if {[set ::restart_$srv]} {srv_stop $srv}
 
   # Compose command line
 
-  set port [set ::tcp.port_$srv]
-  set name [set ::tms_name_$srv]
-
-  lappend command $::java_cmd -Xmx1G -Xms256M -Xmn256M
-  if {[info exists ::java_args]} {lappend command {*}$::java_args}
-  lappend command -Dfile.encoding=UTF-8
+  set params {-Xmx1G -Xms256M -Xmn256M}
+  if {[info exists ::java_args]} {lappend params {*}$::java_args}
+  lappend params -Dfile.encoding=UTF-8
 
   set engine ${::rendering.engine}
   if {$engine != "(default)"} {
     set engine [file dirname $::server_jar]/$engine
     if {$::java_version <= 8} {
-      lappend command -Xbootclasspath/p:$engine
+      lappend params -Xbootclasspath/p:$engine
       set engine [regsub {.jar} $engine {-sun-java2d.jar}]
-      lappend command -Xbootclasspath/p:$engine
-      lappend command -Dsun.java2d.renderer=sun.java2d.marlin.DMarlinRenderingEngine
+      lappend params -Xbootclasspath/p:$engine
+      lappend params -Dsun.java2d.renderer=sun.java2d.marlin.DMarlinRenderingEngine
     } else {
-      lappend command --patch-module java.desktop=$engine
+      lappend params --patch-module java.desktop=$engine
     }
   }
 
 # set now [clock format [clock seconds] -format "%Y-%m-%d_%H-%M-%S"]
-# lappend command -Xloggc:$::cwd/gc.$now.log -XX:+PrintGCDetails
-# lappend command -Dlog4j.debug
-  lappend command -Dlog4j.configuration=file:$::tmpdir/log4j.properties
+# lappend params -Xloggc:$::cwd/gc.$now.log -XX:+PrintGCDetails
+# lappend params -Dlog4j.debug
+  lappend params -Dlog4j.configuration=file:$::tmpdir/log4j.properties
 
-  lappend command -Dsun.java2d.opengl=true
-# lappend command -Dsun.java2d.d3d=true
-# lappend command -Dsun.java2d.accthreshold=0
-# lappend command -Dsun.java2d.translaccel=true
-# lappend command -Dsun.java2d.ddforcevram=true
-# lappend command -Dsun.java2d.ddscale=true
-# lappend command -Dsun.java2d.ddblit=true
-# lappend command -Dsun.java2d.renderer.log=true
-  lappend command -Dsun.java2d.renderer.log=false
-  lappend command -Dsun.java2d.renderer.useLogger=true
-# lappend command -Dsun.java2d.renderer.doStats=true
-# lappend command -Dsun.java2d.renderer.doChecks=true
-# lappend command -Dsun.java2d.renderer.useThreadLocal=true
-  lappend command -Dsun.java2d.renderer.profile=speed
-  lappend command -Dsun.java2d.renderer.useRef=hard
-  lappend command -Dsun.java2d.renderer.pixelWidth=2048
-  lappend command -Dsun.java2d.renderer.pixelHeight=2048
-  lappend command -Dsun.java2d.renderer.tileSize_log2=8
-  lappend command -Dsun.java2d.renderer.tileWidth_log2=8
-  lappend command -Dsun.java2d.renderer.subPixel_log2_X=2
-  lappend command -Dsun.java2d.renderer.subPixel_log2_Y=2
-  lappend command -Dsun.java2d.renderer.useFastMath=true
-  lappend command -Dsun.java2d.render.bufferSize=524288
-# lappend command -Dawt.useSystemAAFontSettings=on
+  lappend params -Dsun.java2d.opengl=true
+# lappend params -Dsun.java2d.d3d=true
+# lappend params -Dsun.java2d.accthreshold=0
+# lappend params -Dsun.java2d.translaccel=true
+# lappend params -Dsun.java2d.ddforcevram=true
+# lappend params -Dsun.java2d.ddscale=true
+# lappend params -Dsun.java2d.ddblit=true
+# lappend params -Dsun.java2d.renderer.log=true
+  lappend params -Dsun.java2d.renderer.log=false
+  lappend params -Dsun.java2d.renderer.useLogger=true
+# lappend params -Dsun.java2d.renderer.doStats=true
+# lappend params -Dsun.java2d.renderer.doChecks=true
+# lappend params -Dsun.java2d.renderer.useThreadLocal=true
+  lappend params -Dsun.java2d.renderer.profile=speed
+  lappend params -Dsun.java2d.renderer.useRef=hard
+  lappend params -Dsun.java2d.renderer.pixelWidth=2048
+  lappend params -Dsun.java2d.renderer.pixelHeight=2048
+  lappend params -Dsun.java2d.renderer.tileSize_log2=8
+  lappend params -Dsun.java2d.renderer.tileWidth_log2=8
+  lappend params -Dsun.java2d.renderer.subPixel_log2_X=2
+  lappend params -Dsun.java2d.renderer.subPixel_log2_Y=2
+  lappend params -Dsun.java2d.renderer.useFastMath=true
+  lappend params -Dsun.java2d.render.bufferSize=524288
+# lappend params -Dawt.useSystemAAFontSettings=on
 
-  lappend command -jar $::server_jar
+  set fd [open $::tmpdir/java_args w]
+  foreach item $params {puts $fd "$item"}
+  close $fd
 
-  if {$::server_type == 1} {
-    set config $::tmpdir/config
-    file mkdir $config/tasks
-  }
+  lappend command $::java_cmd @$::tmpdir/java_args -jar $::server_jar
 
   if {$::server_type == 1 && $srv == "srv"} {
-    lappend command -config [file nativename $config]
+    lappend command -config [file nativename $::tmpdir]
 
-    set file server.properties
     set data "terminate=true\n"
     append data "requestlog-format="
     if {${::log.requests}} {append data "From %{client}a Get %U%q Status %s Size %O bytes Time %{ms}T ms"}
     append data "\n"
     if {${::tcp.interface} == "localhost"} {append data "host=localhost\n"}
-    append data "port=${::tcp.port_srv}\n"
+    append data "port=$port\n"
     append data "acceptQueueSize=${::tcp.maxconn}\n"
     set md5 [md5 -hex [encoding convertto utf-8 $data]]
 
-    if {![info exists ::tms_md5_$file] || $md5 != [set ::tms_md5_$file]} {
-      set ::tms_md5_$file $md5
+    if {![info exists ::md5_cfg] || $::md5_cfg != $md5} {
       srv_stop $srv
-      set fd [open $config/$file w]
+      set fd [open $::tmpdir/server.properties w]
       puts -nonewline $fd $data
       close $fd
+      set ::md5_cfg $md5
     }
 
   }
@@ -2274,14 +2273,11 @@ proc srv_start {srv} {
 
     foreach {item value} $params {lappend command -$item $value}
 
-    if {![info exists ::tms_md5_$srv]} {
-      set ::tms_md5_$srv $md5
-      write_mapsforge $srv
-    } elseif {$md5 != [set ::tms_md5_$srv]} {
-      set ::tms_md5_$srv $md5
+    if {![info exists ::md5_$srv] || [set ::md5_$srv] != $md5} {
       srv_stop $srv
       clean_mapsforge $srv
       write_mapsforge $srv
+      set ::md5_$srv $md5
     }
 
   } elseif {$::server_type == 1} {
@@ -2289,20 +2285,13 @@ proc srv_start {srv} {
     set data ""
     foreach {item value} $params {append data "$item=$value\n"}
 
-    set task [lindex [split $name] 1]
-    if {![info exists ::tms_md5_$srv]} {
-      set ::tms_md5_$srv $md5
-      set fd [open $config/tasks/$task.properties w]
-      puts -nonewline $fd $data
-      close $fd
-      write_mapsforge $srv
-    } elseif {$md5 != [set ::tms_md5_$srv]} {
-      set ::tms_md5_$srv $md5
+    if {![info exists ::md5_$srv] || [set ::md5_$srv] != $md5} {
       clean_mapsforge $srv
-      set fd [open $config/tasks/$task.properties w]
+      set fd [open $::tmpdir/tasks/$name.properties w]
       puts -nonewline $fd $data
       close $fd
       write_mapsforge $srv
+      set ::md5_$srv $md5
     }
 
     if {$srv == "ovl"} {return}
@@ -2313,7 +2302,7 @@ proc srv_start {srv} {
     srv_stop $srv
   }
 
-  append name " Server \[[string toupper $srv]\]"
+  set text "$name Server \[[string toupper $srv]\]"
   # Server not yet running: TCP port is currently in use?
   set count 0
   while {$count < 5} {
@@ -2323,7 +2312,7 @@ proc srv_start {srv} {
     after 200
   }
   if {$rc} {
-    error_message [mc m59 $name $port $fd] return
+    error_message [mc m59 $text $port $fd] return
     return
   }
   close $fd
@@ -2331,17 +2320,17 @@ proc srv_start {srv} {
 
   # Start server
 
-  cputi "[mc m54 $name] ..."
+  cputi "[mc m54 $text] ..."
   cputs "[get_shell_command $command]"
 
   process_start $command $srv
-  set ::tms_restart_$srv 0
+  set ::restart_$srv 0
 
   # Wait until port becomes ready to accept connections or server aborts
   # Send dummy render request and wait for rendering initialization
 
-  set url "http://127.0.0.1:${port}/0/0/0.png"
-  if {$::server_type == 1} {append url "?task=$task"}
+  set url "http://127.0.0.1:$port/0/0/0.png"
+  if {$::server_type == 1} {append url "?task=$name"}
   while {[process_running $srv]} {
     if {[catch {::http::geturl $url} token]} {after 10; continue}
     set size [::http::size $token]
@@ -2351,7 +2340,7 @@ proc srv_start {srv} {
   after 20
   update
 
-  if {![process_running $srv]} {error_message [mc m55 $name] return; return}
+  if {![process_running $srv]} {error_message [mc m55 $text] return; return}
   set ${srv}::port $port
 
 }
@@ -2370,7 +2359,7 @@ proc srv_stop {srv} {
   if {$::server_version < 190000} {
     process_kill $srv
   } else {
-    set url "http://127.0.0.1:${port}/terminate"
+    set url "http://127.0.0.1:$port/terminate"
     if {![catch {::http::geturl $url} token]} {
       if {[::http::status $token] == "eof"} {set code 200} \
       else {set code [::http::ncode $token]}
@@ -2425,8 +2414,9 @@ while {1} {
 
 # Create server's temporary files folder
 
-append tmpdir /[format "MTS%8.8x" [pid]]
+append tmpdir /[format "TMS%8.8x" [pid]]
 file mkdir $tmpdir
+if {$server_type == 1} {file mkdir $tmpdir/tasks}
 
 # Create server logging properties
 
@@ -2442,8 +2432,8 @@ close $fd
 # Start Mapsforge tile server
 
 busy_state 1
-set tms_restart_srv 0
-set tms_restart_ovl 0
+set restart_srv 0
+set restart_ovl 0
 srv_start srv
 
 # Start QMapShack (if server is running)
@@ -2457,7 +2447,7 @@ busy_state 0
 # Wait for new selection or finish
 
 bind .buttons.continue <Double-ButtonPress-1> \
-	"set tms_restart_srv 1;set tms_restart_ovl 1"
+	"set restart_srv 1;set restart_ovl 1"
 
 update idletasks
 if {![info exists action]} {vwait action}
@@ -2486,13 +2476,13 @@ qms_stop
 if {[process_running qms]} {process_kill qms}
 
 # Linux: work-around forcing Tcl to clean up it's background zombie processes
-catch "exec /bin/true"
+catch {exec /bin/true}
 
 # Delete file Mapsforge tms file(s) and tile cache folder(s)
 # Delete temporary files folder
 
 foreach item {srv ovl} {clean_mapsforge $item}
-catch "file delete -force $tmpdir"
+catch {file delete -force $tmpdir}
 
 # Unmap main toplevel window
 
@@ -2519,7 +2509,7 @@ if {[send $ctid "winfo ismapped ."]} {
 destroy .
 
 # Let Windows OS remove remaining temporary TCL folder after some delay
-regsub {MTS} $tmpdir {TCL} tmpdir
+regsub {TMS} $tmpdir {TCL} tmpdir
 if {$tcl_platform(os) == "Windows NT" && [file isdirectory $tmpdir]} {
   regsub -all {/} $tmpdir {\\\\} tmp
   exec cmd.exe /C "TIMEOUT /T 1 /NOBREAK > NUL & RMDIR /S /Q $tmp" &
