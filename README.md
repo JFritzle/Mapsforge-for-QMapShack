@@ -6,7 +6,9 @@ QMapShack currently does not support local Mapsforge maps out of the box. Prebui
 
 QMapShack however is able to handle maps provided as tiles by a [Tile Map Service](https://en.wikipedia.org/wiki/Tile_Map_Service) (TMS), which is mainly used by web mapping servers. To make local Mapsforge maps nevertheless available within QMapShack, a local tile server can be set up to render these Mapsforge maps and to interact with QMapShack via TMS protocol. The corresponding tile server is available at this [mapsforgesrv](https://github.com/telemaxx/mapsforgesrv) repository.  
 
-While old tile server type is capable of rendering only one single set of parameters at a time, the new so-called *tasks* server type is capable of rendering multiple sets of parameters concurrently. Thus, a single *tasks* server instance can replace multiple old server instances.  
+While old *single task* server type was capable of rendering only one single set of parameters at a time, the new *multiple tasks* server type is capable of rendering multiple sets of parameters concurrently. Thus, one single *multiple tasks* server instance can replace multiple *single task* server instances.  
+**This Graphical user interface only supports the *multiple tasks* server type.**  
+Latest GUI supporting *single task* server type is still available in GitHub's [*legacy*](https://github.com/JFritzle/Mapsforge-for-QMapShack/tree/legacy) branch.
 
 Section [Mapsforge Maps](https://github.com/Maproom/qmapshack/wiki/DocBasicsMapDem#user-content-mapsforge-maps) of QMapShack’s wiki shortly describes how to set up an old type tile server and manually connect it to QMapShack by an appropriate TMS file. 
 
@@ -21,10 +23,8 @@ User settings file is named _Mapsforge-for-QMapShack.ini_. A template file is pr
 Resource files are named _Mapsforge-for-QMapShack.<locale\>_, where _<locale\>_ matches locale’s 2 lowercase letters ISO 639-1 code. English localized resource file _Mapsforge-for-QMapShack.en_ and German localized resource file _Mapsforge-for-QMapShack.de_ are provided. Script can be easily localized to any other system’s locale by providing a corresponding resource file using English resource file as a template. 
 
 Screenshot of graphical user interface: 
-![GUI](https://github.com/JFritzle/Mapsforge-for-QMapShack/assets/62614244/bc890a22-a5e6-45a1-8a3c-853ca6d3dc13)
+![GUI_Windows](https://github.com/user-attachments/assets/461700db-a89f-4117-92db-bdfd5aa09e4a)
 
-Please note:  
-Old tile server type has reached end of life and version 0.21.4 is last version released. Further development only takes place on new "tasks" server type. After some grace period, graphical user interface support for the old server type will be dropped. Therefore, an early switch to the new server type is recommended.   
 
 ### Installation
 
@@ -34,29 +34,27 @@ Linux: If not yet installed, install QMapShack package using Linux package manag
 Run QMapShack at least once and initialize map & cache folders by 'File -> Setup Map Paths'.
 
 2.	Java runtime environment (JRE) or Java development kit (JDK)  
-Note: While old server type versions exist for JRE version 8 or higher, new *tasks* server type versions require JRE version 11 or higher. Each JDK contains JRE as subset.  
+JRE version 11 or higher is required. Each JDK contains JRE as subset.  
 Windows: If not yet installed, download and install JRE or JDK, e.g. from [Oracle](https://www.java.com) or [Adoptium](https://adoptium.net/de/temurin/releases).  
 Linux: If not yet installed, install JRE or JDK using Linux package manager. (Ubuntu: _apt install openjdk-<version\>-jre_ or _apt install openjdk-<version\>-jdk_ with required or newer _<version\>_)
 
 3.	Mapsforge tile server  
 Open [mapsforgesrv releases](https://github.com/telemaxx/mapsforgesrv/releases).  
-For old server type and JRE version 11 or higher, download most recently released jar file _mapsforgesrv-fatjar.jar_ from   _<release\>\_for\_java11_ assets.  
-For old server type and JRE version 8 (or higher), download most recently released jar file _mapsforgesrv4java8.jar_ from _<release\>\_for\_java8_ assets.  
-For new *tasks* server type and JRE version 11 or higher, download most recently released jar file _mapsforgesrv-fatjar.jar_ from _<release\>\_for\_java11_tasks_ assets.  
+Download most recently released jar file _mapsforgesrv-fatjar.jar_ from _<release\>\_for\_java11_tasks_ assets.  
 Windows: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _%programfiles%/MapsforgeSrv_.  
 Linux: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
 Note:  
-Currently Mapsforge tile server old server type and new *tasks* server type with server version 0.17.4 or higher is required. Previous server versions are no longer supported.  
+New *multiple tasks* server type and server version 0.21.0.0 or higher is required.  
+Old *single task* server type and previous server versions are no longer supported.  
 
 4. Alternative Marlin rendering engine (optional, recommended)  
 [Marlin](https://github.com/bourgesl/marlin-renderer) is an open source Java2D rendering engine optimized for performance, replacing the standard built into Java. Download is available at [Marlin-renderer releases](https://github.com/bourgesl/marlin-renderer/releases).  
 For JRE version 11 or higher, download jar file _marlin-\*.jar_ from latest _Marlin-renderer \<latest version> for JDK11+_ section's assets.  
-For JRE version 8, download both jar files _marlin-\*.jar_ from latest _Marlin-renderer \<latest version> for JDK8_ section's assets.  
 Windows: Copy downloaded jar file(s) into Mapsforge tile server’s installation folder, e.g. into folder _%programfiles%/MapsforgeSrv_.  
 Linux: Copy downloaded jar file(s) into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
 
 5.	Tcl/Tk scripting language version 8.6 or higher binaries  
-Windows: Download and install latest stable version of Tcl/Tk, currently 9.0.1 See https://wiki.tcl-lang.org/page/Binary+Distributions for available binary distributions. Recommended Windows binary distribution is from [teclab’s tcltk](https://gitlab.com/teclabat/tcltk/-/packages) Windows repository. Select most recent installation file _tcltk86-9.0.1.\<number>.Win10.nightly.\<date>.tgz_. Unpack zipped tar archive (file extension _.tgz_) into your Tcl/Tk installation folder, e.g. _%programfiles%/Tcl_.  
+Windows: Download and install latest stable version of Tcl/Tk, currently 9.0.1 See https://wiki.tcl-lang.org/page/Binary+Distributions for available binary distributions. Recommended Windows binary distribution is from [teclab’s tcltk](https://gitlab.com/teclabat/tcltk/-/packages) Windows repository. Select most recent installation file _tcltk90-9.0.1.\<number>.Win10.nightly.\<date>.tgz_. Unpack zipped tar archive (file extension _.tgz_) into your Tcl/Tk installation folder, e.g. _%programfiles%/Tcl_.  
 Note: [7-Zip](https://www.7-zip.org) file archiver/extractor is able to unpack _.tgz_ archives.   
 Linux: Install packages _tcl, tcllib, tcl-thread, tk_ and _tklib_ using Linux package manager. Since Tcl script now uses threads, package _tcl-thread_ is required. In addition, package _tklib_ is required for using tooltips.  (Ubuntu: _apt install tcl tcllib tcl-thread tk tklib_)
 
@@ -110,7 +108,7 @@ or associate file extension _.tcl_ to Tcl/Tk window shell’s binary _/usr/bin/w
 
 ### Usage
 
-* After selecting map(s), theme file, theme style, style's overlays etc. in graphical user interface, hit _Start_ button to start tile server and QMapShack. When QMapShack has started successfully, activate QMapShack's map _Mapsforge_ to show map(s) selected in graphical user interface. If changing settings while QMapShack is running, a restart of tile server is required to adopt new settings. To restart server, hit _Start_ button again. As QMapShack was caching tiles already loaded with previous settings, it is necessary to clear QMapShack's tile cache, which happens at restart too. After restart, right-click QMapShack's maps list and force QMapShack to reload maps.
+* After selecting tasks(s), map(s), theme file, theme style, style's overlays etc. in graphical user interface, hit _Start_ button to start tile server and QMapShack. When QMapShack has started successfully, activate QMapShack's map _Mapsforge_ to show map(s) selected in graphical user interface. If changing settings while QMapShack is running, a restart of tile server is required to adopt new settings. To restart server, hit _Start_ button again. As QMapShack was caching tiles already loaded with previous settings, it is necessary to clear QMapShack's tile cache, which happens at restart too. After restart, right-click QMapShack's maps list and force QMapShack to reload maps.
 * Closing either graphical user interface or QMapShack window also closes tile server.
 * Use keyboard keys Ctrl-plus to increase and keyboard keys Ctrl-minus to decrease font size of graphical user interface and/or output console.
 * See output console for tile server’s and QMapShack's output.
@@ -125,7 +123,7 @@ Screenshot of QMapShack showing Heidelberg (Germany) and using
 * Style's default overlays plus additional overlay _elv-waymarks_ aka _Waymarks_
 * Hillshading settings as above
 
-![Heidelberg](https://user-images.githubusercontent.com/62614244/164913887-1f0ef534-cce3-44d1-9381-4120a8b5b6b6.jpg)
+![Heidelberg](https://github.com/user-attachments/assets/2d15cb64-2f9e-439a-a20a-79fff1f81532)
 
 ### Hints
 
