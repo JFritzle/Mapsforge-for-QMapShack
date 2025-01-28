@@ -1,0 +1,127 @@
+# Script's English localized text strings
+
+# Rules:
+# message label must exactly match message label in script
+# followed by localized text string
+
+# Documentation:
+# https://www.tcl-lang.org/man/tcl/TclCmd/msgcat.htm
+
+# ISO 639-1 code for English language: en
+set iso_639_1 "en"
+
+::msgcat::mcmset $iso_639_1 {	# Begin of translations
+
+i00	"Error reading user settings\nfrom file '%s'"
+i01	"Mandatory user settings missing,\nfile '%s' not found"
+
+l01	"Mapsforge for QMapShack"
+
+l02	"Server task(s)"
+l02t	"Configure the displayed task or\ncreate a new one and hit Return key.\nValid task name characters: A-Za-z0.9_.+-"
+l02e	"Task name '%s' invalid"
+l03t	"Use mouse button 1 to turn server tasks on or off.\nUse keys UP or DOWN and mark task to configure or delete.\nUse DEL key to delete marked task from configuration.\nThe default task is always selected and cannot be deleted."
+
+l11	"Preferred Mapsforge maps language"
+l11t	"2 lowercase letters ISO 639-1 code\nSee output console for supported map languages"
+l13	"Mapsforge maps folder"
+l14	"Mapsforge map(s)"
+l14t	"Mouse button 1 selects a map and deselects others.\nShift key + mouse button 1 extends selection.\nCtrl key + mouse button 1 toggles selection."
+l15	"Append Mapsforge world map"
+l16	"Mapsforge themes folder"
+l17	"Mapsforge theme"
+l18	"Theme style"
+
+e01	"%s '%s'\nalready running with process id %d"
+e02	"Terminate process by 'kill'\nand restart?"
+e03	"Operating system %s not supported"
+e04	"Command '%s'\nset by variable '%s' is not executable"
+e05	"Folder/file '%s'\nset by variable '%s' does not exist"
+e06	"QMapShack's map & cache folders not yet defined!\nSet folders in QMapShack by 'File -> Setup Map Paths'"
+e07	"%s version is '%s'.\nAt least version '%s' is required!"
+e08	"%s version cannot be determined from command output!\n\nCommand:\n%s\nOutput:\n%s"
+e11	"No Mapsforge map found"
+
+c01	"Select overlays for style"
+c02	"Configure hillshading"
+c03	"Scaling & colors"
+c04	"Configure server"
+
+s01	"Scaling of scalable map elements"
+s02	"All elements"
+s03	"Text labels"
+s04	"Symbols"
+s05	"Lines"
+
+s06	"Color post-processing"
+s07	"Gamma correction"
+s08	"Contrast stretching"
+
+x01	"Server information"
+x02	"Version Java runtime"
+x03	"Version Mapsforge server"
+x04	"Server's Java archive"
+
+x11	"Server configuration"
+x12	"Rendering engine"
+x13	"Network interface(s)"
+x15	"TCP port"
+x16	"TCP accept queue size"
+x19	"Logging of server requests"
+
+b01	"Start"
+b01t	"Activate map 'Mapsforge Map' in\nQMapShack. After changing settings\npress this 'Start' button again,\nthen right-click QMapShack's maps list\nand force QMapShack to reload maps!\nDouble click forces a server restart."
+b02	"Quit"
+b02t	"Terminate QMapShack and quit"
+
+e41	"No Mapsforge map(s) selected"
+e45	"DEM folder missing or not valid"
+
+m51	"Process %d (%s) started"
+m52	"Process %d (%s) terminated"
+m53	"Process %d (%s) terminated by 'kill'"
+m54	"Starting %s"
+m55	"Unexpected end of %s"
+m56	"Searching desktop windows of process %d (%s)"
+m57	"No desktop windows of process %d (%s) found"
+m58	"Send window manager notification 'close' to process %d (%s)"
+m59	"%s not started.\nTCP port '%s' not available:\n%s"
+m60	"Delete QMapShack's tile cache folder '%s'"
+m61	"Delete QMapShack's map file '%s'"
+m62	"Create QMapShack's map file '%s'"
+m63	"QMapShack map name: '%s'"
+
+c80	"Enable hillshading"
+c81	"Hillshading on map"
+c81t	"Hillshading must be enabled\nin Mapsforge theme"
+c82	"Hillshading as map"
+c82t	"Activate QMapShack's map\n'Mapsforge Hillshading'"
+
+l81	"DEM folder (digital elevation model)"
+l81t	"HGT files with elevation data and/or\nZIP archives containing equally named HGT file\nExample: archive N49E008.zip containing file N49E008.hgt"
+l82	"Choose DEM folder"
+l83	"Algorithm"
+l84	"Linearity"
+l85	"Scale"
+l86	"Height angle of light source"
+l87	"Gray value magnitude scaling"
+l880	"Asymmetry factor"
+l881	"Minimum slope"
+l882	"Maximum slope"
+l885	"Preprocess invalid elevation values"
+l891	"Minimum zoom level"
+l892	"Maximum zoom level"
+
+b91	"All"
+b91t	"Select all"
+b92	"Reset"
+b92t	"Reset to\ndefaults"
+b93	"None"
+b93t	"Deselect all"
+
+l99	"Output console"
+c99	"Show output console"
+m99	"Output console can now be closed!"
+
+};	# Do not remove: end of translations
+	# Do not remove: end of file (Ctrl+Z)

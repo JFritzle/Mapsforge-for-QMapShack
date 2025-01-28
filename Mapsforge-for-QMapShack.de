@@ -1,0 +1,127 @@
+# Script's German localized text strings
+
+# Rules:
+# message label must exactly match message label in script
+# followed by localized text string
+
+# Documentation:
+# https://www.tcl-lang.org/man/tcl/TclCmd/msgcat.htm
+
+# ISO 639-1 code for German language: de
+set iso_639_1 "de"
+
+::msgcat::mcmset $iso_639_1 {	# Begin of translations
+
+i00	"Fehler beim Lesen der Benutzereinstellungen\nvon Datei '%s'"
+i01	"Erforderliche Benutzereinstellungen fehlen,\nDatei '%s' nicht gefunden"
+
+l01	"Mapsforge für QMapShack"
+
+l02	"Server-Task(s)"
+l02t	"Konfiguriere den angezeigten Task oder\nerzeuge einen neuen und drücke die Return-Taste.\nGültige Zeichen für Tasknamen: A-Za-z0-9_.+-"
+l02e	"Taskname '%s' ungültig"
+l03t	"Schalte Server-Tasks mit Maustaste 1 ein oder aus.\nMarkiere den Task zum Konfigurieren oder Löschen mit Tasten AUF und AB.\nLösche den markierten Task mit Taste ENTF.\nDer Default-Task ist immer eingeschaltet und kann nicht gelöscht werden."
+
+l11	"Bevorzugte Mapsforge-Kartensprache"
+l11t	"2 Kleinbuchstaben ISO 639-1 Code\nUnterstützte Kartensprachen siehe Ausgabe-Konsole"
+l13	"Mapsforge-Kartenordner"
+l14	"Mapsforge-Karte(n)"
+l14t	"Maustaste 1 wählt eine Karte aus, alle anderen ab.\nUmschalttaste + Maustaste 1 erweitert die Auswahl.\nStrg-Taste + Maustaste 1 schaltet die Auswahl um."
+l15	"Mapsforge-Weltkarte hinzufügen"
+l16	"Mapsforge-Themenordner"
+l17	"Mapsforge-Thema"
+l18	"Themenstil"
+
+e01	"%s '%s'\nmit Prozess-ID %d läuft bereits"
+e02	"Prozess durch 'kill' beenden\nund neu starten?"
+e03	"Betriebssytem %s nicht unterstützt"
+e04	"Befehl '%s'\ngesetzt durch Variable '%s' ist nicht ausführbar"
+e05	"Ordner/Datei '%s'\ngesetzt durch Variable '%s' existiert nicht"
+e06	"Karten- & Kachelordner von QMapShack noch nicht definiert!\nSetze Ordner in QMapShack über 'Datei -> Kartenverzeichnisse angeben'"
+e07	"%s-Version ist '%s'.\nMindestens Version '%s' ist erforderlich!"
+e08	"%s-Version kann nicht aus der Befehlsausgabe bestimmt werden!\n\nBefehl:\n%s\nAusgabe:\n%s"
+e11	"Keine Mapsforge-Karte gefunden"
+
+c01	"Overlays zum Stil auswählen"
+c02	"Schummerung konfigurieren"
+c03	"Skalierung & Farben"
+c04	"Server konfigurieren"
+
+s01	"Skalierbare Kartenelemente skalieren"
+s02	"Alle Elemente"
+s03	"Beschriftungen"
+s04	"Symbole"
+s05	"Linien"
+
+s06	"Farbe nachbearbeiten"
+s07	"Gammakorrektur"
+s08	"Kontrastspreizung"
+
+x01	"Server-Information"
+x02	"Version Java-Runtime"
+x03	"Version Mapsforge Server"
+x04	"Java-Archiv des Servers"
+
+x11	"Server-Konfiguration"
+x12	"Rendering-Engine"
+x13	"Netzwerk-Interface(s)"
+x15	"TCP-Port"
+x16	"Größe der TCP-Accept-Queue"
+x19	"Logging von Server-Requests"
+
+b01	"Starten"
+b01t	"Karte 'Mapsforge Map' in QMapShack\naktivieren. Nach Änderung von Einstellungen\ndiesen Knopf 'Starten' erneut drücken,\ndann Kartenliste in QMapShack rechtsklicken\nund QMapShack-Karten erneut laden!\nDoppelklick erzwingt einen Serverneustart."
+b02	"Beenden"
+b02t	"QMapShack schließen und beenden"
+
+e41	"Keine Mapsforge-Karte(n) ausgewählt"
+e45	"DEM-Ordner fehlt oder nicht gültig"
+
+m51	"Prozess %d (%s) gestartet"
+m52	"Prozess %d (%s) beendet"
+m53	"Prozess %d (%s) durch 'kill' beendet"
+m54	"Starte %s"
+m55	"Unerwartetes Ende von %s"
+m56	"Suche Desktop-Fenster von Prozess %d (%s)"
+m57	"Keine Desktop-Fenster von Prozess %d (%s) gefunden"
+m58	"Sende Window-Manager-Nachricht 'Schließen' an Prozess %d (%s)"
+m59	"%s nicht gestartet.\nTCP-Port '%s' nicht verfügbar:\n%s"
+m60	"Lösche QMapShack-Kachelspeicher '%s'"
+m61	"Lösche QMapShack-Kartendatei '%s'"
+m62	"Erzeuge QMapShack-Kartendatei '%s'"
+m63	"QMapShack-Kartenname: '%s'"
+
+c80	"Schummerung einschalten"
+c81	"Schummerung auf Karte"
+c81t	"Schummerung muss im\nMapsforge-Thema aktiviert sein"
+c82	"Schummerung als Karte"
+c82t	"Karte 'Mapsforge Hillshading'\nin QMapShack aktivieren"
+
+l81	"DEM-Ordner (Digital Elevation Model)"
+l81t	"HGT-Dateien mit Höhendaten und/oder\nZIP-Archive mit Inhalt gleichnamige HGT-Datei\nBeispiel:\nArchiv N49E008.zip mit Inhalt Datei N49E008.hgt"
+l82	"DEM-Ordner auswählen"
+l83	"Algorithmus"
+l84	"Linearität"
+l85	"Skalierung"
+l86	"Höhenwinkel der Lichtquelle"
+l87	"Skalierung der Grauwertgröße"
+l880	"Asymmetriefaktor"
+l881	"Minimale Neigung"
+l882	"Maximale Neigung"
+l885	"Ungültige Höhenwerte vorverarbeiten"
+l891	"Minimale Zoom-Stufe"
+l892	"Maximale Zoom-Stufe"
+
+b91	"Alle"
+b91t	"Alles auswählen"
+b92	"Reset"
+b92t	"Zurücksetzen auf\nDefault-Werte"
+b93	"Keine"
+b93t	"Alles abwählen"
+
+l99	"Ausgabe-Konsole"
+c99	"Ausgabe-Konsole anzeigen"
+m99	"Ausgabe-Konsole kann jetzt geschlossen werden!"
+
+};	# Do not remove: end of translations
+	# Do not remove: end of file (Ctrl+Z)
