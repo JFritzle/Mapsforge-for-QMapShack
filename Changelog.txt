@@ -1,0 +1,29 @@
+2025-01-28
+
+- Now showing Tcl/Tk version and script release date in output console
+- Improved tooltips for multiple server tasks configuration
+- Added tooltip to maps selection
+- Now accepting uppercase layer ids theme file
+- Now accepting quoted unicode characters in theme file
+- Updated README hints
+
+2025-01-20
+
+- Note:
+  Values of "min_zoom_level" and "max_zoom_level" parameters
+  in "Mapsforge-for-QMapShack.ini" file must! be converted
+  from QMapShack zoom level to tile zoom level notation
+  Conversion formula: tile zoom level = 21 - QMapShack zoom level
+- Improved input handling of number values
+- Changed hillshading parameter text to Mapsforge notation
+- Added fast adaptive hillshading "adaptasy" (server version >= 0.23.0.1)
+- Added optional parameters for minimum and maximum hillshading zoom level
+  to allow overriding built-in hillshading zoom levels
+  (server version >= 0.23.0.2)
+
+2024-12-31
+
+- Initial commit supporting only new "multiple tasks" server type
+- Dropped support of old "single task" server type
+- Dropped support of Java version < 11
+- Added support of multiple concurrent server tasks
