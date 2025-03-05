@@ -1,7 +1,7 @@
 # Mapsforge-for-QMapShack
 Graphical user interface between Mapsforge tile server and QMapShack 
 
-### Preliminary
+### About
 QMapShack currently does not support local Mapsforge maps out of the box. Prebuilt Mapsforge maps are provided amongst others by [mapsforge.org](http://download.mapsforge.org) and [openandromaps.org](https://www.openandromaps.org). 
 
 QMapShack however is able to handle maps provided as tiles by a [Tile Map Service](https://en.wikipedia.org/wiki/Tile_Map_Service) (TMS), which is mainly used by web mapping servers. To make local Mapsforge maps nevertheless available within QMapShack, a local tile server can be set up to render these Mapsforge maps and to interact with QMapShack via TMS protocol. The corresponding tile server is available at this [mapsforgesrv](https://github.com/telemaxx/mapsforgesrv) repository.  
@@ -16,7 +16,7 @@ Section [Mapsforge Maps](https://github.com/Maproom/qmapshack/wiki/DocBasicsMapD
 ### Graphical user interface
 This project’s intension is to easily let the user interactively and comfortably select the numerous available options of tile server. In addition, option settings as well as position and font size of graphical user interface automatically get saved and restored. Tile server and QMapShack get started/restarted using these options without need to manually set up any configuration files. 
 
-Graphical user interface is a single script written in _Tcl/Tk_ scripting language and is executable on _Microsoft Windows_ and _Linux_ operating system. Language-neutral script file _Mapsforge-for-QMapShack.tcl_ an additional user settings file and at least one localized resource file. Additional files must follow _Tcl/Tk_ syntax rules too. 
+Graphical user interface is a single script written in _Tcl/Tk_ scripting language and is executable on _Microsoft Windows_ and _Linux_ operating system. Language-neutral script file _Mapsforge-for-QMapShack.tcl_ requires an additional user settings file and at least one localized resource file. Additional files must follow _Tcl/Tk_ syntax rules too. 
 
 User settings file is named _Mapsforge-for-QMapShack.ini_. A template file is provided.
 
@@ -54,9 +54,11 @@ Windows: Copy downloaded jar file(s) into Mapsforge tile server’s installation
 Linux: Copy downloaded jar file(s) into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
 
 5.	Tcl/Tk scripting language version 8.6 or higher binaries  
-Windows: Download and install latest stable version of Tcl/Tk, currently 9.0.1 See https://wiki.tcl-lang.org/page/Binary+Distributions for available binary distributions. Recommended Windows binary distribution is from [teclab’s tcltk](https://gitlab.com/teclabat/tcltk/-/packages) Windows repository. Select most recent installation file _tcltk90-9.0.1.\<number>.Win10.nightly.\<date>.tgz_. Unpack zipped tar archive (file extension _.tgz_) into your Tcl/Tk installation folder, e.g. _%programfiles%/Tcl_.  
+Windows: Download and install latest stable version of Tcl/Tk, currently 9.0.  
+See https://wiki.tcl-lang.org/page/Binary+Distributions for available binary distributions. Recommended Windows binary distribution is from [teclab’s tcltk](https://gitlab.com/teclabat/tcltk/-/packages) Windows repository. Select most recent installation file _tcltk90-9.0.\<x.y>.Win10.nightly.\<date>.tgz_. Unpack zipped tar archive (file extension _.tgz_) into your Tcl/Tk installation folder, e.g. _%programfiles%/Tcl_.  
 Note: [7-Zip](https://www.7-zip.org) file archiver/extractor is able to unpack _.tgz_ archives.   
-Linux: Install packages _tcl, tcllib, tcl-thread, tk_ and _tklib_ using Linux package manager. Since Tcl script now uses threads, package _tcl-thread_ is required. In addition, package _tklib_ is required for using tooltips.  (Ubuntu: _apt install tcl tcllib tcl-thread tk tklib_)
+Linux: Install packages _tcl, tcllib, tcl-thread, tk_ and _tklib_ using Linux package manager.  
+(Ubuntu: _apt install tcl tcllib tcl-thread tk tklib_)
 
 6.	Mapsforge maps  
 Download Mapsforge maps for example from [openandromaps.org](https://www.openandromaps.org). Each downloaded OpenAndroMaps map archive contains a map file (file extension _.map_) and a points-of-interest file (file extension _.poi_). Tile server will render the former file, QMapShack is able to handle the latter file by itself.  
@@ -130,18 +132,20 @@ Screenshot of QMapShack showing Heidelberg (Germany) and using
 * Output console  
 While console output of tile server and/or QMapShack can be informative and helpful to verify what is happening as well as to analyze errors, writing to console costs some performance. Therefore the console should be hidden if not needed. 
 * Built-in world map  
-Since the built-in [Mapsforge world map](https://download.mapsforge.org/maps/world/world.map) only shows the coastline, it only serves as a rough overview. Due to map's low resolution, coastlines show inaccurate at high resolution. Because the Mapsforge renderer prefers land on the world map to sea on the selected detailed local map, it may be advisable to disable the built-in world map when rendering coastal regions at high resolution. In order not to cover an accurate map, the built-in world map has been automatically deactivated at higher zoom levels since tile server version 0.21.0.3.
+Since the built-in [Mapsforge world map](https://download.mapsforge.org/maps/world/world.map) only shows the coastline, it only serves as a rough overview. Due to map's low resolution, coastlines show inaccurate at high resolution.  
+In order not to cover an accurate map, the built-in world map has been automatically deactivated at higher zoom levels since tile server version 0.21.0.3.    
+Starting with server version 0.23.0.3, built-in world map is rendered with lower priority than user-defined accurate maps. Zoom level restriction was therefore removed. 
 * Hillshading  
   * When selecting "Hillshading on map", map and hillshading are rendered  into one single map.  
 Same result can be achieved faster by not enabling hillshading in graphical user interface but enabling QMapShack's built-in hillshading.
   * When selecting "Hillshading as map", map and hillshading are rendered as two separate maps. Post-processing hillshading, gray value of flat area gets mapped to full transparency. Thus the flatter the area, the more the original colors of the map shine through. Finally, hillshading can be used as an alpha-transparent overlay for any map.  
 [OpenTopoMap](https://opentopomap.org) uses same hillshading technique as hillshading algorithm "diffuselight".  
-Activate <ins>first</ins> QMapShack's maps "Mapsforge Map" <ins>and second</ins> "Mapsforge Hillshading" if "Hillshading as map" was selected. Former shows map tiles without hillshading, latter shows hillshading as alpha-transparent overlay. Map "Mapsforge Hillshading" can also be used as overlay for other maps not containing hillshading, e.g. OpenStreetMap.  
+Activate <ins>first</ins> QMapShack's maps "Mapsforge Map" and <ins>second</ins> "Mapsforge Hillshading" if "Hillshading as map" was selected. Former shows map tiles without hillshading, latter shows hillshading as alpha-transparent overlay. Map "Mapsforge Hillshading" can also be used as overlay for other maps not containing hillshading, e.g. OpenStreetMap.  
 Same result can not be achieved by QMapShack's built-in hillshading
 * If QMapShack is showing rendered Mapsforge map a bit blurry, then within QMapShack  
   * first open “View -> Setup Map View” and set “Scale” to “Square”  
   * then hit “symbol grid” button at upper right corner above and set “Projection” to “World Mercator (OSM)”  
-   As with QMapShack 1.17.1, projection “World Mercator (OSM)” built-in settings have been changed. As a current workaround for QMapShack 1.17.1 replace “Projection & Datum” string manually from `EPSG:3857` to  
+   As with QMapShack 1.17.1, projection “World Mercator (OSM)” built-in settings have been changed. As a current workaround for QMapShack 1.17.1 until next version becomes released, replace “Projection & Datum” string manually from `EPSG:3857` to  
       `+proj=merc +a=6378137 +b=6378137 +lat_ts=0.001 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +type=crs`
  
 
