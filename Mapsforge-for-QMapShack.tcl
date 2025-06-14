@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 if {![info exists tk_version]} {package require Tk}
 wm withdraw .
 
-set version "2025-04-29"
+set version "2025-06-14"
 set script [file normalize [info script]]
 set title [file tail $script]
 set cwd [pwd]
@@ -614,6 +614,10 @@ if {$tcl_platform(os) == "Windows NT"} {
 }
 if {![info exists cachePath] || ![info exists mapPath]} \
   {error_message [mc e06] exit}
+foreach item {cachePath mapPath} {
+  set value [set $item]
+  if {![file isdirectory $value]} {catch "file mkdir $value"}
+}
 set tiles_folder $cachePath
 set tms_folder $mapPath
 unset cachePath mapPath
@@ -732,13 +736,14 @@ if {[llength $maps] == 0} {error_message [mc e11] exit}
 cd $themes_folder
 set themes [find_files "" "*.xml"]
 cd $cwd
-lappend themes (DEFAULT) (OSMARENDER)
+lappend themes (OSMARENDER)
 if {$server_version >= 250000} {
   lappend themes (MOTORIDER) (BIKER)
 } elseif {$server_version >= 220000} {
   lappend themes (MOTORIDER) (MOTORIDER_DARK)
 }
 set themes [lsort -dictionary $themes]
+set themes [linsert $themes 0 (DEFAULT)]
 
 # --- Begin of main window
 
@@ -786,6 +791,25 @@ pack .task_post -in .task -side right -fill y
 pack .task_name -in .task -side right -fill x -expand 1
 pack .task -in .f -expand 1 -fill x -pady {8 0}
 foreach item {.task .task_name} {tooltip $item [mc l02t]}
+
+proc task_updown {d} {
+  set l [llength ${::task.set}]
+  if {$l == 1} {return}
+  set v ${::task.active}
+  save_task_settings $v
+  set i [lsearch ${::task.set} $v]
+  incr i $d
+  if {$i == $l} {set i 0}
+  if {$i == -1} {incr i $l}
+  set v [lindex ${::task.set} $i]
+  set ::task.name $v
+  .task_name icursor end
+  set ::task.active $v
+  restore_task_settings $v
+}
+bind .task_name <MouseWheel> {task_updown [expr %D>0?-1:+1]}
+foreach item {Down Button-4} {bind .task_name <$item> {task_updown +1}}
+foreach item {Up   Button-5} {bind .task_name <$item> {task_updown -1}}
 
 proc task_list_post {} {
   if {![task_item_add]} return
@@ -1552,7 +1576,12 @@ pack .server.config -pady {5 0}
 
 # Rendering engine
 
-set pattern marlin-*-Unsafe-OpenJDK11
+set pattern marlin-*-Unsafe-OpenJDK
+if {$java_version < 17} {
+  append pattern 11
+} else  {
+  append pattern 1\[17\]
+}
 set engines [glob -nocomplain -tails -type f \
 	-directory [file dirname $server_jar] $pattern.jar]
 lappend engines (default)
