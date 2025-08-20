@@ -18,9 +18,9 @@ i01	"Erforderliche Benutzereinstellungen fehlen,\nDatei '%s' nicht gefunden"
 l01	"Mapsforge für QMapShack"
 
 l02	"Server-Task(s)"
-l02t	"Konfiguriere den angezeigten Task oder\nerzeuge einen neuen und drücke die Return-Taste.\nGültige Zeichen für Tasknamen: A-Za-z0-9_.+-"
+l02t	"Konfiguriere den angezeigten Task oder\nerzeuge einen neuen und drücke die Return-Taste.\nGültige Zeichen für Tasknamen: A-Za-z0-9_.+-\nWähle den zu konfigurierenden Task\nmit den Tasten AUF oder AB oder dem Mausrad."
 l02e	"Taskname '%s' ungültig"
-l03t	"Schalte Server-Tasks mit Maustaste 1 ein oder aus.\nMarkiere den Task zum Konfigurieren oder Löschen mit Tasten AUF und AB.\nLösche den markierten Task mit Taste ENTF.\nDer Default-Task ist immer eingeschaltet und kann nicht gelöscht werden."
+l03t	"Schalte Server-Tasks mit der Maustaste 1 ein oder aus.\nWähle den Task zum Konfigurieren oder Löschen mit Tasten AUF oder AB.\nLösche den gewählten Task mit Taste ENTF.\nDer Default-Task ist immer eingeschaltet und kann nicht gelöscht werden."
 
 l11	"Bevorzugte Mapsforge-Kartensprache"
 l11t	"2 Kleinbuchstaben ISO 639-1 Code\nUnterstützte Kartensprachen siehe Ausgabe-Konsole"

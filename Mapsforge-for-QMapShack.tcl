@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 if {![info exists tk_version]} {package require Tk}
 wm withdraw .
 
-set version "2025-06-14"
+set version "2025-08-20"
 set script [file normalize [info script]]
 set title [file tail $script]
 set cwd [pwd]
@@ -512,9 +512,8 @@ ctsend {
     .txt yview moveto [lindex $py 0]
   }
 
-  set lines 0
+  set aid 0
   proc write {text} {
-    incr ::lines
     .txt configure -state normal
     if {[string index $text 0] == "\r"} {
       set text [string range $text 1 end]
@@ -522,8 +521,10 @@ ctsend {
     }
     .txt insert end $text
     .txt configure -state disabled
-    .txt see end
-    if {$::lines == 256} {update; set ::lines 0}
+    # Prevent console from freezing by
+    # too fast/much incoming write requests
+    catch "after cancel $::aid"
+    set ::aid [after 100 {.txt see end}]
   }
 
   proc show_hide {show} {
@@ -544,26 +545,16 @@ ctsend {
     }
   }
 
-  lassign [chan pipe] fdi fdo
-  thread::detach $fdo
-  fconfigure $fdi -blocking 0 -buffering line -translation lf
-  fileevent $fdi readable "
-    while {\[gets $fdi line\] >= 0} {write \"\$line\\n\"}
-  "
 }
-
-set fdo [ctsend "set fdo"]
-thread::attach $fdo
-fconfigure $fdo -blocking 0 -buffering line -translation lf
-interp alias {} ::cputs {} ::puts $fdo
 
 if {$console == 1} {
   set console.show 1
   ctsend "show_hide 1"
 }
 
-# Mark output message
+# Write to console
 
+proc cputs {text} {thread::send -async $::ctid [list write $text\n]}
 proc cputi {text} {cputs "\[---\] $text"}
 proc cputw {text} {cputs "\[+++\] $text"}
 
@@ -805,6 +796,7 @@ proc task_updown {d} {
   set ::task.name $v
   .task_name icursor end
   set ::task.active $v
+  catch ".task_list.listbox activate $i"
   restore_task_settings $v
 }
 bind .task_name <MouseWheel> {task_updown [expr %D>0?-1:+1]}
@@ -815,7 +807,6 @@ proc task_list_post {} {
   if {![task_item_add]} return
 
   set tl .task_list
-  set tn .task_name
   set lb $tl.listbox
   set sb $tl.scrollbar
 
@@ -824,6 +815,7 @@ proc task_list_post {} {
     return
   }
 
+  set tn .task_name
   set x [winfo rootx $tn]
   set y [winfo rooty $tn]
   scan [winfo geometry $tn] "%dx%d" w h
@@ -847,10 +839,9 @@ proc task_list_post {} {
 
   scrollbar $sb -command "$lb yview"
   set len [llength ${::task.set}]
-  set max 5
   listbox $lb -selectmode multiple -activestyle underline -bd 0 \
-	-takefocus 1 -exportselection 0 -height [expr min($len,$max)]
-  if {$len > $max} {
+	-takefocus 1 -exportselection 0 -height [expr min($len,5)]
+  if {$len > 5} {
     pack $sb -side right -fill y
     $lb configure -yscrollcommand "$sb set"
   }
@@ -866,7 +857,8 @@ proc task_list_post {} {
      incr i
   }
 
-  bind $lb <Map> {focus -force %W}
+  foreach v {Map Enter} \
+	{bind $lb <$v> {focus -force %W}}
   bind $lb <Delete> task_item_delete
   bind $lb <Tab> task_item_toggle
   bind $lb <Key-space> {task_item_toggle;break}
@@ -875,8 +867,9 @@ proc task_list_post {} {
   foreach v {<PrevLine> <NextLine>} \
 	{bind $lb <$v> "[bind Listbox <$v>];task_name_update;break"}
   foreach v {ButtonRelease-3 Escape FocusOut} \
-	{bind $lb <$v> task_list_unpost}
-  bind $tl <Button-1> {button-1-press %W %X %Y}
+	{bind $lb <$v> {task_list_unpost;break}}
+  bind $tl <Button> \
+	{if {"[winfo containing %X %Y]" != "%W"} {task_list_unpost;break}}
 
   wm transient $tl .
   wm attribute $tl -topmost 1
@@ -887,12 +880,12 @@ proc task_list_post {} {
 }
 
 proc task_list_unpost {} {
+  focus -force .task_name
   set tl .task_list
   set lb $tl.listbox
   set ::task.use {}
   foreach i [$lb curselection] {lappend ::task.use [$lb get $i]}
   destroy $tl
-# focus -force .task_name
 }
 
 proc task_name_update {} {
@@ -920,12 +913,16 @@ proc task_item_toggle {} {
 
 proc task_item_delete {} {
   set lb .task_list.listbox
+  set sb .task_list.scrollbar
   set i [$lb index active]
   set v [$lb get $i]
   if {$v == "(default)"} return
   $lb delete $i
-  task_name_update
   set ::task.set [lreplace ${::task.set} $i $i]
+  set len [llength ${::task.set}]
+  $lb configure -height [expr min($len,5)]
+  if {$len <= 5} {pack forget $sb}
+  task_name_update
   set file $::ini_folder/task.$v.ini
   file delete $file
   set ::task.active [$lb get active]
