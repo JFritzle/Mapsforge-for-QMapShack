@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 if {![info exists tk_version]} {package require Tk}
 wm withdraw .
 
-set version "2025-08-22"
+set version "2025-08-27"
 set script [file normalize [info script]]
 set title [file tail $script]
 set cwd [pwd]
@@ -515,11 +515,18 @@ ctsend {
 
   proc write {text} {
     .txt configure -state normal
-    if {[string index $text 0] == "\r"} {
-      set text [string range $text 1 end]
-      .txt delete end-2l end-1l
+    foreach item [split $text \n] {
+      if {[string index $item 0] == "\r"} {
+	set item [string range $item 1 end]
+	.txt delete end-2l end-1l
+      }
+      if {[string index $item end] == "\b"} {
+	set item [string range $item 0 end-1]
+      } else {
+	append item \n
+      }
+      .txt insert end $item
     }
-    .txt insert end $text
     .txt configure -state disabled
     if {[winfo ismapped .]} {.txt see end}
   }
@@ -545,9 +552,11 @@ ctsend {
 
   lassign [::tcl::chan::fifo2] fdi fdo
   thread::detach $fdo
-  fconfigure $fdi -blocking 0 -buffering line -translation lf
+  fconfigure $fdi -blocking 0 -buffering full -buffersize 131072 -translation lf
   fileevent $fdi readable "
-    while {\[gets $fdi line\] >= 0} {write \"\$line\\n\"}
+    set text {}
+    while {\[gets $fdi line\] >= 0} {lappend text \$line}
+    write \[join \$text \\n\]
   "
 }
 
@@ -2199,14 +2208,7 @@ proc process_start {command process} {
 
   proc tsend {script} "return \[send $tid \$script\]"
 
-  tsend {
-    lassign [chan pipe] fdi fdo
-    set rc [catch "exec $command >&@ $fdo &" result]
-    close $fdo
-    if {$rc} {close $fdi} else {thread::detach $fdi}
-  }
-
-  set rc [tsend "set rc"]
+  set rc [tsend {catch {open "| $command 2>@1" r} result}]
   set result [tsend "set result"]
 
   if {$rc} {
@@ -2220,20 +2222,22 @@ proc process_start {command process} {
   namespace upvar $process fd fd pid pid exe exe
   set ${process}::command $command
 
-  set fd [tsend "set fdi"]
-  thread::attach $fd
-  fconfigure $fd -blocking 0 -buffering line
+  set fd $result
+  set pid [tsend "pid $fd"]
 
-  set pid $result
   set exe [file tail [lindex $command 0]]
   set mark \[[string toupper $process]\]
   cputi "[mc m51 $pid $exe] $mark"
 
+  tsend "thread::detach $fd"
+  thread::attach $fd
+  fconfigure $fd -blocking 0 -buffering full -buffersize 131072
+
   unset -nocomplain ::$process.eof
   fileevent $fd readable "
-    if {\[gets $fd line\] >= 0} {
-      cputs \"\\$mark \$line\"
-    }
+    set text {}
+    while {\[gets $fd line\] >= 0} {lappend text \"\\$mark \$line\"}
+    if {\$text != {}} {cputs \[join \$text \\n\]}
     if {\[eof $fd\]} {
       thread::release $tid
       namespace delete $process
@@ -2755,7 +2759,7 @@ foreach item {global theme shading qmapshack} {save_${item}_settings}
 
 if {[ctsend "winfo ismapped ."]} {
   ctsend "
-    write \"\n[mc m99]\"
+    write \"\n[mc m99]\b\"
     wm protocol . WM_DELETE_WINDOW {}
     bind . <ButtonRelease-3> {destroy .}
     tkwait window .
