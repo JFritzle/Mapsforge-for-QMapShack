@@ -25,9 +25,13 @@ if {[encoding system] != "utf-8"} {
 if {![info exists tk_version]} {package require Tk}
 wm withdraw .
 
-set version "2025-09-25"
+set version "2025-10-05"
 set script [file normalize [info script]]
 set title [file tail $script]
+
+# Workaround running script by "Open with" on Windows
+# Fatal Qt6WebEngineCore issue!
+if {[pwd] == "C:/Windows/System32"} {cd [file dirname $script]}
 set cwd [pwd]
 
 # Required packages
@@ -402,6 +406,12 @@ set log.requests 0
 set min_zoom_level [expr max( 4,$min_zoom_level)]
 set max_zoom_level [expr min(20,$max_zoom_level)]
 
+set qms.conf 0
+set qms.file ""
+set qms.args ""
+set qms.default {splash 0 style Fusion scale 1.00 debug 0}
+lmap {i v} ${qms.default} {set qms.$i $v}
+
 # Save/restore settings
 
 proc save_settings {file args} {
@@ -589,44 +599,6 @@ proc get_shell_command {command} {
   return [join [lmap item $command {regsub {^(.* +.*|())$} $item {"\1"}}]]
 }
 
-# Get QMapShack's cache & map folder paths
-
-if {$tcl_platform(os) == "Windows NT"} {
-  foreach item {cachePath mapPath} {
-    if {[catch {registry get \
-	{HKEY_CURRENT_USER\SOFTWARE\QLandkarte\QMapShack\Canvas} $item} \
-	value]} continue
-    switch [registry type \
-	{HKEY_CURRENT_USER\SOFTWARE\QLandkarte\QMapShack\Canvas} $item] {
-      sz	{set $item $value}
-      multi_sz	{set $item [lindex $value 0]}
-    }
-    if {[set $item] == ""} {unset $item}
-  }
-} elseif {$tcl_platform(os) == "Linux"} {
-  if {![catch {open $env(HOME)/.config/QLandkarte/QMapShack.conf r} fd]} {
-    set data [split [read $fd] \n]
-    close $fd
-    foreach item {cachePath mapPath} {
-      set index [lsearch -regexp $data "^$item="]
-      if {$index < 0} continue
-      regexp {^.*?=(.*)$} [lindex $data $index] "" value
-      set $item [string trim [lindex [split $value ,] 0]]
-      if {[set $item] == ""} {unset $item}
-    }
-    unset data
-  }
-}
-if {![info exists cachePath] || ![info exists mapPath]} \
-  {error_message [mc e06] exit}
-foreach item {cachePath mapPath} {
-  set value [set $item]
-  if {![file isdirectory $value]} {catch "file mkdir $value"}
-}
-set tiles_folder $cachePath
-set tms_folder $mapPath
-unset cachePath mapPath
-
 # Check commands, files & folders
 
 foreach item {qms_cmd java_cmd} {
@@ -637,7 +609,7 @@ foreach item {server_jar} {
   set value [set $item]
   if {![file isfile $value]} {error_message [mc e05 $value $item] exit}
 }
-foreach item {maps_folder themes_folder tms_folder tiles_folder} {
+foreach item {maps_folder themes_folder} {
   set value [set $item]
   if {![file isdirectory $value]} {error_message [mc e05 $value $item] exit}
 }
@@ -795,14 +767,14 @@ set task.use [lmap task ${task.set} \
 	{if {$task ni ${task.use}} continue;set task}]
 
 labelframe .task -labelanchor w -text "[mc l02]: " -bd 0
-entry .task_name -width 32 -textvariable task.name \
+entry .task.name -width 32 -textvariable task.name \
 	-takefocus 1 -highlightthickness 0
-bind .task_name <Return> task_item_add
-button .task_post -image ArrowDown -command task_list_post
-pack .task_post -in .task -side right -fill y
-pack .task_name -in .task -side right -fill x -expand 1
+bind .task.name <Return> task_item_add
+button .task.post -image ArrowDown -command task_list_post
+pack .task.post -side right -fill y
+pack .task.name -side right -fill x -expand 1
 pack .task -in .f -expand 1 -fill x -pady {8 0}
-foreach item {.task .task_name} {tooltip $item [mc l02t]}
+foreach item {.task .task.name} {tooltip $item [mc l02t]}
 
 proc task_updown {d} {
   set l [llength ${::task.set}]
@@ -815,14 +787,14 @@ proc task_updown {d} {
   if {$i == -1} {incr i $l}
   set v [lindex ${::task.set} $i]
   set ::task.name $v
-  .task_name icursor end
+  .task.name icursor end
   set ::task.active $v
   catch ".task_list.listbox activate $i"
   restore_task_settings $v
 }
-bind .task_name <MouseWheel> {task_updown [expr %D>0?-1:+1]}
-foreach item {Down Button-4} {bind .task_name <$item> {task_updown +1}}
-foreach item {Up   Button-5} {bind .task_name <$item> {task_updown -1}}
+bind .task.name <MouseWheel> {task_updown [expr %D>0?-1:+1]}
+foreach item {Down Button-4} {bind .task.name <$item> {task_updown +1}}
+foreach item {Up   Button-5} {bind .task.name <$item> {task_updown -1}}
 
 proc task_list_post {} {
   if {![task_item_add]} return
@@ -836,11 +808,11 @@ proc task_list_post {} {
     return
   }
 
-  set tn .task_name
+  set tn .task.name
   set x [winfo rootx $tn]
   set y [winfo rooty $tn]
   scan [winfo geometry $tn] "%dx%d" w h
-  incr w [winfo width .task_post]
+  incr w [winfo width .task.post]
   incr y $h
 
   toplevel $tl -relief flat -bd 0
@@ -901,7 +873,7 @@ proc task_list_post {} {
 }
 
 proc task_list_unpost {} {
-  focus -force .task_name
+  focus -force .task.name
   set tl .task_list
   set lb $tl.listbox
   set ::task.use {}
@@ -951,7 +923,7 @@ proc task_item_delete {} {
 }
 
 proc task_item_add {} {
-  set tn .task_name
+  set tn .task.name
   set v [$tn get]
   set i [lsearch ${::task.set} $v]
   if {$i != -1} {
@@ -1001,11 +973,11 @@ proc save_task_settings {task} {
 proc restore_task_settings {task} {
   set theme_selection ${::theme.selection}
   restore_settings $::ini_folder/task.$task.ini
-  set list [.maps_values get 0 end]
-  .maps_values selection clear 0 end
+  set list [.maps.values get 0 end]
+  .maps.values selection clear 0 end
   foreach item ${::maps.selection} {
     set i [lsearch -exact $list $item]
-    if {$i != -1} {.maps_values selection set $i}
+    if {$i != -1} {.maps.values selection set $i}
   }
   set i 0
   lmap v ${::shading.asy.values} {set ::shading.asy.array($i) $v; incr i}
@@ -1024,11 +996,11 @@ proc restore_task_settings {task} {
 if {![info exists maps.language]} {set maps.language $language}
 labelframe .lang -labelanchor w -text [mc l11]:
 pack .lang -in .f -expand 1 -fill x -pady 1
-entry .lang_value -textvariable maps.language -width 4 -justify center
-pack .lang_value -in .lang -side right
-foreach item {.lang .lang_value} {tooltip $item [mc l11t]}
+entry .lang.value -textvariable maps.language -width 4 -justify center
+pack .lang.value -side right
+foreach item {.lang .lang.value} {tooltip $item [mc l11t]}
 
-.lang_value configure -validate key -vcmd {
+.lang.value configure -validate key -vcmd {
   if {%d < 1} {return 1}
   if {[string length %P] > 2} {return 0}
   if {![string is lower %S]}  {return 0}
@@ -1039,31 +1011,31 @@ foreach item {.lang .lang_value} {tooltip $item [mc l11t]}
 
 labelframe .maps_folder -labelanchor nw -text [mc l13]:
 pack .maps_folder -in .f -expand 1 -fill x -pady 1
-entry .maps_folder_value -textvariable maps_folder \
+entry .maps_folder.value -textvariable maps_folder \
 	-state readonly -takefocus 0 -highlightthickness 0
-pack .maps_folder_value -in .maps_folder -expand 1 -fill x
+pack .maps_folder.value -expand 1 -fill x
 
 labelframe .maps -labelanchor nw -text [mc l14]:
 pack .maps -in .f -expand 1 -fill x -pady 1
-scrollbar .maps_scroll -command ".maps_values yview"
-listbox .maps_values -selectmode extended -activestyle none \
+scrollbar .maps.scroll -command ".maps.values yview"
+listbox .maps.values -selectmode extended -activestyle none \
 	-takefocus 1 -exportselection 0 \
 	-width 0 -height [expr min([llength $maps],8)] \
-	-yscrollcommand ".maps_scroll set"
-pack .maps_scroll -in .maps -side right -fill y
-pack .maps_values -in .maps -side left -expand 1 -fill both
-tooltip .maps_values [mc l14t]
+	-yscrollcommand ".maps.scroll set"
+pack .maps.scroll -side right -fill y
+pack .maps.values -side left -expand 1 -fill both
+tooltip .maps.values [mc l14t]
 
 foreach map $maps {
-  .maps_values insert end $map
-  if {$map in ${maps.selection}} {.maps_values selection set end}
+  .maps.values insert end $map
+  if {$map in ${maps.selection}} {.maps.values selection set end}
 }
-set selection [.maps_values curselection]
-if {[llength $selection] > 0} {.maps_values see [lindex $selection 0]}
+set selection [.maps.values curselection]
+if {[llength $selection] > 0} {.maps.values see [lindex $selection 0]}
 
-bind .maps_values <<ListboxSelect>> {
-  set maps.selection [lmap index [.maps_values curselection] \
-	{.maps_values get $index}]
+bind .maps.values <<ListboxSelect>> {
+  set maps.selection [lmap index [.maps.values curselection] \
+	{.maps.values get $index}]
 }
 
 # Append Mapsforge world map
@@ -1075,9 +1047,9 @@ pack .maps_world -in .f -expand 1 -fill x
 
 labelframe .themes_folder -labelanchor nw -text [mc l16]:
 pack .themes_folder -in .f -expand 1 -fill x -pady 1
-entry .themes_folder_value -textvariable themes_folder \
+entry .themes_folder.value -textvariable themes_folder \
 	-state readonly -takefocus 0 -highlightthickness 0
-pack .themes_folder_value -in .themes_folder -expand 1 -fill x
+pack .themes_folder.value -expand 1 -fill x
 
 set width 0
 foreach item $themes \
@@ -1086,18 +1058,18 @@ set width [expr $width/[font measure TkTextFont "0"]+1]
 
 labelframe .themes -labelanchor nw -text [mc l17]:
 pack .themes -in .f -expand 1 -fill x -pady 1
-combobox .themes_values -width $width \
+combobox .themes.values -width $width \
 	-validate key -validatecommand {return 0} \
 	-textvariable theme.selection -values $themes
-if {[.themes_values current] < 0} {.themes_values current 0}
-pack .themes_values -in .themes -expand 1 -fill x
+if {[.themes.values current] < 0} {.themes.values current 0}
+pack .themes.values -expand 1 -fill x
 
 # Mapsforge theme style selection
 
 labelframe .styles -labelanchor nw -text [mc l18]:
-combobox .styles_values -validate key -validatecommand {return 0}
-pack .styles_values -in .styles -expand 1 -fill x
-bind .styles_values <<ComboboxSelected>> update_overlays_selection
+combobox .styles.values -validate key -validatecommand {return 0}
+pack .styles.values -expand 1 -fill x
+bind .styles.values <<ComboboxSelected>> update_overlays_selection
 
 # Mapsforge theme overlays selection
 
@@ -1122,6 +1094,12 @@ pack .effects_show_hide -in .f -expand 1 -fill x
 checkbutton .server_show_hide -text [mc c04] \
 	-command "show_hide_toplevel_window .server"
 pack .server_show_hide -in .f -expand 1 -fill x
+
+# Show QMapShack settings
+
+checkbutton .qms_show_hide -text [mc c05] \
+	-command "show_hide_toplevel_window .qms"
+pack .qms_show_hide -in .f -expand 1 -fill x
 
 # Action buttons
 
@@ -1178,7 +1156,7 @@ ctsend "
 # - visual rendering effects
 # - server settings
 
-foreach widget {.overlays .shading .effects .server} {
+foreach widget {.overlays .shading .effects .server .qms} {
   set parent ${widget}_show_hide
   toplevel $widget -bd 5
   wm withdraw $widget
@@ -1261,7 +1239,7 @@ proc position_toplevel_window {widget} {
 
 # Global toplevel bindings
 
-foreach widget {. .overlays .shading .effects .server} {
+foreach widget {. .overlays .shading .effects .server .qms} {
   bind $widget <Control-plus>  {incr_font_size +1}
   bind $widget <Control-minus> {incr_font_size -1}
   bind $widget <Control-KP_Add>      {incr_font_size +1}
@@ -1292,15 +1270,13 @@ if {![file isdirectory ${dem.folder}]} {set dem.folder ""}
 labelframe .shading.dem_folder -labelanchor nw -text [mc l81]:
 tooltip .shading.dem_folder [mc l81t]
 pack .shading.dem_folder -fill x -expand 1 -pady 1
-entry .shading.dem_folder_value -textvariable dem.folder \
+entry .shading.dem_folder.value -textvariable dem.folder \
 	-state readonly -takefocus 0 -highlightthickness 0
-tooltip .shading.dem_folder_value [mc l81t]
-button .shading.dem_folder_button -style Arrow.TButton \
+tooltip .shading.dem_folder.value [mc l81t]
+button .shading.dem_folder.button -style Arrow.TButton \
 	-image ArrowDown -command choose_dem_folder
-pack .shading.dem_folder_button -in .shading.dem_folder \
-	-side right -fill y
-pack .shading.dem_folder_value -in .shading.dem_folder \
-	-side left -fill x -expand 1
+pack .shading.dem_folder.button -side right -fill y
+pack .shading.dem_folder.value -side left -fill x -expand 1
 
 proc choose_dem_folder {} {
   set folder [tk_chooseDirectory -parent . -initialdir ${::dem.folder} \
@@ -1321,8 +1297,7 @@ combobox .shading.algorithm.values -width 12 \
 	-textvariable shading.algorithm -values $list
 if {[.shading.algorithm.values current] < 0} \
 	{.shading.algorithm.values current 0}
-pack .shading.algorithm.values -in .shading.algorithm \
-	-side right -anchor e -expand 1
+pack .shading.algorithm.values -side right -anchor e -expand 1
 
 # Hillshading algorithm parameters
 
@@ -1337,15 +1312,14 @@ entry .shading.simple.value2 -textvariable shading.simple.scale \
 set .shading.simple.value2.minmax {0 10 0.666}
 tooltip .shading.simple.value2 "0 ≤ [mc l85] ≤ 10"
 pack .shading.simple.value1 .shading.simple.label2 .shading.simple.value2 \
-	-in .shading.simple -side left -anchor w -expand 1 -fill x -padx {5 0}
+	-side left -anchor w -expand 1 -fill x -padx {5 0}
 
 labelframe .shading.diffuselight -labelanchor w -text [mc l86]:
 entry .shading.diffuselight.value -textvariable shading.diffuselight.angle \
 	-width 8 -justify right
 set .shading.diffuselight.value.minmax {0 90 50.}
 tooltip .shading.diffuselight.value "0° ≤ [mc l86] ≤ 90°"
-pack .shading.diffuselight.value -in .shading.diffuselight \
-	-side right -anchor e -expand 1
+pack .shading.diffuselight.value -side right -anchor e -expand 1
 
 frame .shading.asy
 foreach i {0 1 2} {
@@ -1374,7 +1348,7 @@ entry .shading.magnitude.value -textvariable shading.magnitude \
 	-width 8 -justify right
 set .shading.magnitude.value.minmax {0 4 1.}
 tooltip .shading.magnitude.value "0 ≤ [mc l87] ≤ 4"
-pack .shading.magnitude.value -in .shading.magnitude -anchor e -expand 1
+pack .shading.magnitude.value -anchor e -expand 1
 
 # Theme's hillshading zoom
 
@@ -1570,25 +1544,23 @@ pack .server.info
 
 labelframe .server.jre_version -labelanchor w -text [mc x02]:
 pack .server.jre_version -expand 1 -fill x -pady 1
-label .server.jre_version_value -anchor e -textvariable java_string
-pack .server.jre_version_value -in .server.jre_version \
-	-side right -anchor e -expand 1
+label .server.jre_version.value -anchor e -textvariable java_string
+pack .server.jre_version.value -side right -anchor e -expand 1
 
 # Mapsforge server version
 
 labelframe .server.version -labelanchor w -text [mc x03]:
 pack .server.version -expand 1 -fill x -pady 1
-label .server.version_value -anchor e -textvariable server_string
-pack .server.version_value -in .server.version \
-	-side right -anchor e -expand 1
+label .server.version.value -anchor e -textvariable server_string
+pack .server.version.value -side right -anchor e -expand 1
 
 # Mapsforge server version jar archive
 
 labelframe .server.jar -labelanchor nw -text [mc x04]:
 pack .server.jar -expand 1 -fill x -pady 1
-entry .server.jar_value -textvariable server_jar \
+entry .server.jar.value -textvariable server_jar \
 	-state readonly -takefocus 0 -highlightthickness 0
-pack .server.jar_value -in .server.jar -expand 1 -fill x
+pack .server.jar.value -expand 1 -fill x
 
 # Server configuration
 
@@ -1614,49 +1586,45 @@ foreach item $engines \
 set width [expr $width/[font measure TkTextFont "0"]+1]
 
 labelframe .server.engine -labelanchor nw -text [mc x12]:
-combobox .server.engine_values -width $width \
+combobox .server.engine.values -width $width \
 	-validate key -validatecommand {return 0} \
 	-textvariable rendering.engine -values $engines
-if {[.server.engine_values current] < 0} \
-	{.server.engine_values current 0}
+if {[.server.engine.values current] < 0} \
+	{.server.engine.values current 0}
 if {[llength $engines] > 1} {
   pack .server.engine -expand 1 -fill x -pady 1
-  pack .server.engine_values -in .server.engine \
-	-anchor e -expand 1 -fill x
+  pack .server.engine.values -anchor e -expand 1 -fill x
 }
 
 # Server interface
 
 labelframe .server.interface -labelanchor w -text [mc x13]:
-combobox .server.interface_values -width 10 \
+combobox .server.interface.values -width 10 \
 	-textvariable tcp.interface -values {localhost all}
-if {[.server.interface_values current] < 0} \
-	{.server.interface_values current 0}
+if {[.server.interface.values current] < 0} \
+	{.server.interface.values current 0}
 pack .server.interface -expand 1 -fill x -pady {6 2}
-pack .server.interface_values -in .server.interface \
-	-side right -anchor e -expand 1 -padx {3 0}
+pack .server.interface.values -side right -anchor e -expand 1 -padx {3 0}
 
 # Server TCP port number
 
 labelframe .server.port -labelanchor w -text [mc x15]:
-entry .server.port_value -textvariable tcp.port \
+entry .server.port.value -textvariable tcp.port \
 	-width 6 -justify center
-set .server.port_value.minmax "1024 65535 $tcp_port"
-tooltip .server.port_value "1024 ≤ [mc x15] ≤ 65535"
+set .server.port.value.minmax "1024 65535 $tcp_port"
+tooltip .server.port.value "1024 ≤ [mc x15] ≤ 65535"
 pack .server.port -expand 1 -fill x -pady 1
-pack .server.port_value -in .server.port \
-	-side right -anchor e -expand 1 -padx {3 0}
+pack .server.port.value -side right -anchor e -expand 1 -padx {3 0}
 
 # Maximum size of TCP listening queue
 
 labelframe .server.maxconn -labelanchor w -text [mc x16]:
-entry .server.maxconn_value -textvariable tcp.maxconn \
+entry .server.maxconn.value -textvariable tcp.maxconn \
 	-width 6 -justify center
-set .server.maxconn_value.minmax {0 {} 1024}
-tooltip .server.maxconn_value "[mc x16] ≥ 0"
+set .server.maxconn.value.minmax {0 {} 1024}
+tooltip .server.maxconn.value "[mc x16] ≥ 0"
 pack .server.maxconn -expand 1 -fill x -pady 1
-pack .server.maxconn_value -in .server.maxconn \
-	-side right -anchor e -expand 1 -padx {3 0}
+pack .server.maxconn.value -side right -anchor e -expand 1 -padx {3 0}
 
 # Enable/disable server request logging
 
@@ -1670,19 +1638,103 @@ tooltip .server.reset [mc b92t]
 pack .server.reset -pady {5 0}
 
 proc reset_server_values {} {
-  foreach widget {.server.port_value .server.maxconn_value} \
+  foreach widget {.server.port.value .server.maxconn.value} \
 	{set ::[$widget cget -textvariable] [lindex [set ::$widget.minmax] 2]}
-  .server.engine_values current 0
-  .server.interface_values set $::interface
+  .server.engine.values current 0
+  .server.interface.values set $::interface
 }
 
-foreach widget {.server.port_value .server.maxconn_value} {
+foreach widget {.server.port.value .server.maxconn.value} {
   $widget configure -validate all -vcmd {validate_number %W %V %P " " int}
   bind $widget <Shift-ButtonRelease-1> \
 	{set [%W cget -textvariable] [lindex ${::%W.minmax} 2]}
 }
 
 # --- End of server settings
+# --- Begin of QMapShack settings
+
+# Configuration file
+
+checkbutton .qms.conf -text [mc y01]: -variable qms.conf
+tooltip .qms.conf [mc y01t]
+pack .qms.conf -fill x
+
+frame .qms.file
+entry .qms.file.value -textvariable qms.file -width 40 \
+	-state readonly -takefocus 0 -highlightthickness 0
+.qms.file.value xview end
+button .qms.file.button -style Arrow.TButton \
+	-image ArrowDown -command choose_qms_file
+pack .qms.file.button -side right -fill y
+pack .qms.file.value -side left -fill x -expand 1
+pack .qms.file -fill x
+
+proc choose_qms_file {} {
+  lappend ini [mc y02i] {.ini .cfg .conf}
+  lappend all [mc y02a] *
+  set file [tk_getSaveFile -parent . -title "$::title - [mc y02]" \
+	-filetypes [list $ini $all] -initialfile ${::qms.file}]
+  if {$file != ""} {set ::qms.file $file}
+  .qms.file.value xview end
+}
+
+# Enable/disable debug output
+
+checkbutton .qms.debug -text [mc y03] -variable qms.debug
+pack .qms.debug -expand 1 -fill x
+
+# Show splash screen
+
+checkbutton .qms.splash -text [mc y04] -variable qms.splash
+pack .qms.splash -expand 1 -fill x
+
+# Window style
+
+if {$tcl_platform(os) == "Windows NT"} {
+  set qtstyles {Fusion Windows Windows11 WindowsVista ""}
+} elseif {$tcl_platform(os) == "Linux"} {
+  set qtstyles {Fusion Windows ""}
+}
+labelframe .qms.style -labelanchor w -text [mc y05]:
+pack .qms.style -expand 1 -fill x -pady 1
+combobox .qms.style.values \
+	-validate key -validatecommand {return 0} \
+	-textvariable qms.style -values $qtstyles
+if {[.qms.style.values current] < 0} {.qms.style.values current 0}
+pack .qms.style.values -expand 1 -fill x -padx {5 0}
+
+# Additional command line parameters
+
+labelframe .qms.args -labelanchor nw -text [mc y06]:
+pack .qms.args -expand 1 -fill x -pady 1
+entry .qms.args.value -textvariable qms.args -width 40 \
+	-takefocus 1 -highlightthickness 0
+pack .qms.args.value -expand 1 -fill x
+
+# Scale window
+
+labelframe .qms.scale -labelanchor w -text [mc y07]:
+tooltip .qms.scale [mc y07t]
+scale .qms.scale.scale -from 0.50 -to 2.50 -resolution 0.05 \
+	-orient horizontal -variable qms.scale
+bind .qms.scale.scale <Shift-ButtonRelease-1> "set qms.scale 1.00"
+label .qms.scale.value -textvariable qms.scale -width 4 \
+	-relief sunken
+pack .qms.scale -expand 1 -fill x -pady 1
+pack .qms.scale.value -side right -padx {3 0}
+pack .qms.scale.scale -side right -padx {3 0} -expand 1 -fill x
+
+# Reset settings
+
+button .qms.reset -text [mc b92] -width 8 -command reset_qms_values
+tooltip .qms.reset [mc b92t]
+pack .qms.reset -pady {5 0}
+
+proc reset_qms_values {} {
+  uplevel #0 {lmap {i v} ${qms.default} {set qms.$i $v}}
+}
+
+# --- End of QMapShack settings
 # --- Begin of theme file processing
 
 # Get list of attributes from given xml element
@@ -1897,8 +1949,8 @@ proc update_theme_styles_overlays {} {
   }
 
   # Fill style selection & select default style
-  .styles_values configure -values [lmap i ${::style.table} {lindex $i 1}]
-  .styles_values current \
+  .styles.values configure -values [lmap i ${::style.table} {lindex $i 1}]
+  .styles.values current \
 	[lsearch -exact -index 0 ${::style.table} $defaultstyle]
 
   # Show style selection
@@ -1911,7 +1963,7 @@ proc update_theme_styles_overlays {} {
 proc update_overlays_selection {} {
   destroy [winfo children .overlays]
   if {![info exists ::style.table]} return
-  set style [lindex ${::style.table} [.styles_values current]]
+  set style [lindex ${::style.table} [.styles.values current]]
   set style_id [lindex $style 0]
   set parent [string tolower .overlays.$style_id]
   frame $parent
@@ -1990,7 +2042,7 @@ proc select_style_overlays {style_id select} {
 
 proc get_selected_style_overlays {} {
   if {![info exists ::style.table]} return
-  set style_index [.styles_values current]
+  set style_index [.styles.values current]
   set style [lindex ${::style.table} $style_index]
   set style_id [lindex $style 0]
   set overlays [lindex $style 2]
@@ -2018,7 +2070,7 @@ proc set_selected_style_overlays {style_id overlay_ids} {
   }
   lset style 2 $overlays
   lset ::style.table $style_index $style
-  .styles_values current $style_index
+  .styles.values current $style_index
 }
 
 # Save theme settings to folder ini_folder
@@ -2026,7 +2078,7 @@ proc set_selected_style_overlays {style_id overlay_ids} {
 proc save_theme_settings {} {
   if {![info exists ::style.table]} return
   set theme ${::style.theme}
-  set style_index [.styles_values current]
+  set style_index [.styles.values current]
   set style [lindex ${::style.table} $style_index]
   set style_id [lindex $style 0]
   set file "$::ini_folder/theme.[regsub -all {/} $theme {.}].ini"
@@ -2045,7 +2097,7 @@ proc save_theme_settings {} {
 
 # Enable styles & overlays selection
 
-bind .themes_values <<ComboboxSelected>> update_theme_selection
+bind .themes.values <<ComboboxSelected>> update_theme_selection
 update_theme_selection
 
 # --- End of theme file processing
@@ -2071,6 +2123,7 @@ proc save_global_settings {} {
 
 proc save_qmapshack_settings {} {
   save_settings $::ini_folder/qmapshack.ini \
+	qms.conf qms.file qms.debug qms.splash qms.style qms.args qms.scale \
 	tcp.interface tcp.port task.use
 }
 
@@ -2131,14 +2184,14 @@ proc incr_font_size {incr} {
   }
   update idletasks
 
-  foreach item {.themes_values .styles_values .shading.algorithm.values \
-	.server.engine_values .server.interface_values} \
+  foreach item {.themes.values .styles.values .shading.algorithm.values \
+	.server.engine.values .server.interface.values} \
 	{if {[winfo exists $item]} {$item configure -justify left}}
   foreach item {.effects.user_scale .effects.text_scale \
 	.effects.symbol_scale .effects.line_scale \
 	.effects.gamma_scale .effects.contrast_scale} \
 	{if {[winfo exists $item]} {$item configure -width $height}}
-  foreach item {. .overlays .shading .effects .server} \
+  foreach item {. .overlays .shading .effects .server .qms} \
 	{resize_toplevel_window $item}
 }
 
@@ -2156,6 +2209,7 @@ proc selection_ok {} {
 
 proc write_mapsforge {task} {
 
+  if {![file isdirectory $::tms_folder]} return
   set name "Mapsforge [regsub {^(.*)\.(.*)$} $task {\1 \2}]"
   set map $::tms_folder/$name.tms
   cputi "[mc m62 $map] ..."
@@ -2187,16 +2241,19 @@ proc write_mapsforge {task} {
 proc clean_mapsforge {task} {
 
   set name "Mapsforge [regsub {^(.*)\.(.*)$} $task {\1 \2}]"
-
-  set cache $::tiles_folder/$name
-  if {[file exists $cache]} {
-    cputi "[mc m60 $cache] ..."
-    catch {file delete -force $cache}
+  if {[file isdirectory $::tiles_folder]} {
+    set cache $::tiles_folder/$name
+    if {[file exists $cache]} {
+      cputi "[mc m60 $cache] ..."
+      catch {file delete -force $cache}
+    }
   }
-  set map $::tms_folder/$name.tms
-  if {[file exists $map]} {
-    cputi "[mc m61 $map] ..."
-    catch {file delete -force $map}
+  if {[file isdirectory $::tms_folder]} {
+    set map $::tms_folder/$name.tms
+    if {[file exists $map]} {
+      cputi "[mc m61 $map] ..."
+      catch {file delete -force $map}
+    }
   }
 
 }
@@ -2553,8 +2610,14 @@ proc srv_stop {} {
 
 proc qms_start {} {
 
-  lappend command $::qms_cmd --no-splash --style fusion
-  if {[info exists ::qms_args]} {lappend command {*}$::qms_args}
+  lappend command $::qms_cmd
+
+  lappend command {*}${::qms.args}
+  if {!${::qms.splash}} {lappend command --no-splash}
+  if {${::qms.style} != ""} {lappend command --style ${::qms.style}}
+  if {${::qms.conf} && ${::qms.file} != ""} {lappend command -c ${::qms.file}}
+  if {${::qms.debug}} {lappend command -d}
+  set ::env(QT_SCALE_FACTOR) ${::qms.scale}
 
   set name "QMapShack \[QMS\]"
   cputi "[mc m54 $name] ..."
@@ -2694,7 +2757,55 @@ puts $fd "log4j.appender.stdout.layout=org.apache.log4j.PatternLayout"
 puts $fd "log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss.SSS} %m%n"
 close $fd
 
+# Get QMapShack's cache & map folder paths
+
+if {${qms.conf} && ${qms.file} != ""} {
+  set file ${qms.file}
+} elseif {$tcl_platform(os) == "Windows NT"} {
+  unset -nocomplain file
+} elseif {$tcl_platform(os) == "Linux"} {
+  set file $env(HOME)/.config/QLandkarte/QMapShack.conf
+}
+
+set list {cachePath mapPath}
+lassign {} {*}$list
+if {[info exists file]} {
+  if {![catch {open $file r} fd]} {
+    set data [split [read $fd] \n]
+    close $fd
+    foreach item $list {
+      set index [lsearch -regexp $data "^$item="]
+      if {$index < 0} continue
+      regexp {^.*?=(.*)$} [lindex $data $index] "" value
+      set $item [string trim [lindex [split $value ,] 0]]
+    }
+    unset data
+  }
+} else {
+  foreach item $list {
+    if {[catch {registry get \
+	{HKEY_CURRENT_USER\SOFTWARE\QLandkarte\QMapShack\Canvas} $item} \
+	value]} continue
+    switch [registry type \
+	{HKEY_CURRENT_USER\SOFTWARE\QLandkarte\QMapShack\Canvas} $item] {
+      sz	{set $item $value}
+      multi_sz	{set $item [lindex $value 0]}
+    }
+  }
+}
+foreach item $list {
+  set value [set $item]
+  if {$value != "" && $value != "@Invalid()"} {catch "file mkdir $value"}
+}
+if {![file isdirectory $cachePath] || ![file isdirectory $mapPath]} \
+	{error_message [mc e06] return}
+set tiles_folder $cachePath
+set tms_folder $mapPath
+unset {*}$list
+
 # Start Mapsforge server
+
+tk busy hold .qms -cursor X_cursor
 
 busy_state 1
 set restart_srv 0

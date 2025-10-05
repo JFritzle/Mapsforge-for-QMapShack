@@ -1,3 +1,10 @@
+2025-10-05
+
+- Added new QMapShack settings menu
+  Removed qms_args from "Mapsforge-for-QMapShack.ini" instead
+- Workaround running script by "Open with" on Windows (Fatal Qt6 issue!)
+- Minor script optimizations
+
 2025-09-25
 
 - Fixed script aborting when previous theme file no longer exists
