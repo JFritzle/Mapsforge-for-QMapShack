@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 if {![info exists tk_version]} {package require Tk}
 wm withdraw .
 
-set version "2025-10-05"
+set version "2025-10-06"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -720,7 +720,7 @@ set themes [find_files "" "*.xml"]
 cd $cwd
 lappend themes (OSMARENDER)
 if {$server_version >= 260100} {
-  lappend themes (BIKER) (DARK) (INDIGO) (MOTORIDER) 
+  lappend themes (BIKER) (DARK) (INDIGO) (MOTORIDER)
 } elseif {$server_version >= 250000} {
   lappend themes (BIKER) (MOTORIDER)
 } elseif {$server_version >= 220000} {
@@ -1740,7 +1740,7 @@ proc reset_qms_values {} {
 # Get list of attributes from given xml element
 
 proc get_element_attributes {name string} {
-  lappend attributes name $name
+  set attributes {}
   regsub ".*<$name\\s+(.*?)\\s*/?>.*" $string {\1} string
   set items [regsub -all {(\S+?)\s*=\s*(".*?"|'.*?')} $string {{\1=\2}}]
   foreach item $items \
@@ -1778,23 +1778,41 @@ proc update_theme_styles_overlays {} {
   destroy [winfo children .overlays]
 
   set theme ${::theme.selection}
-  if {[regexp {^\(.*\)$} $theme]} {
-    # Built-in themes have no style: nothing to do
-    # Built-in themes have hillshading: enable hillshading configuration
-    .shading.onmap configure -state normal
-    set menu_first -1
-  } elseif {![file exists $::themes_folder/$theme]} {
+  if {![regexp {^\(.*\)$} $theme] && ![file exists $::themes_folder/$theme]} {
     # Theme file no longer exists, use built-in default
     set ::theme.selection [lindex $::themes 0]
+  }
+
+  # Read theme from server's assets or from file
+
+  if {[regexp {^\(.*\)$} $theme]} {
+    set rc [catch "package require zipfile::decode"]
+    if {!$rc} {
+      set file "assets/mapsforge/[string tolower [string trim $theme ()]].xml"
+      set rc [catch "zipfile::decode::open {$::server_jar}"]
+      if {!$rc} {
+	set dict [zipfile::decode::archive]
+	set rc [catch "zipfile::decode::getfile {$dict} {$file}" data]
+	zipfile::decode::close
+	if {$rc} {unset data} \
+	else {set data [encoding convertfrom utf-8 $data]}
+      }
+    }
+  } else {
+    set rc [catch "open {$::themes_folder/$theme} r" fd]
+    if {!$rc} {
+      set data [read $fd]
+      close $fd
+    }
+  }
+
+  if {![info exists data]} {
+    # No theme data
     .shading.onmap configure -state normal
     set menu_first -1
   } else {
-    # Read theme file
+    # Process theme
     set ::style.theme $theme
-    set theme_file $::themes_folder/$theme
-    set fd [open $theme_file r]
-    set data [read $fd]
-    close $fd
 
     # Split into list of elements between "<" and ">"
     set elements [regexp -inline -all {<.*?>} $data]
@@ -1841,6 +1859,7 @@ proc update_theme_styles_overlays {} {
     set layer_data [lrange $menu_data $layer_first $layer_last]
     array unset layer
     array set layer [get_element_attributes layer [lindex $layer_data 0]]
+    set layer(name) $layer(id)
 
     # Find layer's localized layer name
     set indices [lsearch -all -regexp $layer_data {<name\s+.*?>}]
@@ -1857,25 +1876,23 @@ proc update_theme_styles_overlays {} {
     }
 
     # Replace escaped characters within layer's name
-    if {[info exists layer(name)]} {
-      set s $layer(name)
-      set i 0
-      while {[regexp -start $i -indices {&.*?;} $s r]} {
-	set t [string range $s {*}$r]
-	switch -glob [string range $t 1 end-1] {
-	  quot	{set t \"}
-	  amp	{set t \&}
-	  apos	{set t '}
-	  lt	{set t <}
-	  gt	{set t >}
-	  {#x[0-9A-Fa-f]*} {set t [subst \\U[string range $t 3 end-1]]}
-	  {#[0-9]*} {set t [subst \\U[format %x [string range $t 2 end-1]]]}
-	}
-	set s [string replace $s {*}$r $t]
-	set i [lindex $r 0]+1
+    set s $layer(name)
+    set i 0
+    while {[regexp -start $i -indices {&.*?;} $s r]} {
+      set t [string range $s {*}$r]
+      switch -glob [string range $t 1 end-1] {
+	quot	{set t \"}
+	amp	{set t \&}
+	apos	{set t '}
+	lt	{set t <}
+	gt	{set t >}
+	{#x[0-9A-Fa-f]*} {set t [subst \\U[string range $t 3 end-1]]}
+	{#[0-9]*} {set t [subst \\U[format %x [string range $t 2 end-1]]]}
       }
-      set layer(name) $s
+      set s [string replace $s {*}$r $t]
+      set i [lindex $r 0]+1
     }
+    set layer(name) $s
 
     # Find layer's direct overlays
     set layer(overlays) {}
@@ -2382,12 +2399,11 @@ proc srv_task_create {task} {
       if {[regexp {^\(.*\)$} $theme]} {
 	lappend params themefile [string trim $theme ()]
       } else {
-	set theme_file $::themes_folder/$theme
-	lappend params themefile $theme_file
-	if {[info exists style.id]} {
-	  lappend params style ${style.id}
-	  lappend params overlays [join ${overlay.ids} ,]
-	}
+	lappend params themefile $::themes_folder/$theme
+      }
+      if {[info exists style.id]} {
+	lappend params style ${style.id}
+	lappend params overlays [join ${overlay.ids} ,]
       }
       lappend params gamma-correction ${maps.gamma}
       lappend params contrast-stretch ${maps.contrast}

@@ -1,3 +1,8 @@
+2025-10-06
+
+- Added overlay selection for internal render themes
+  (currently "BIKER", "DARK", "INDIGO" and "MOTORIDER")
+
 2025-10-05
 
 - Added new QMapShack settings menu
