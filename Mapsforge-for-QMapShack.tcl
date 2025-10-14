@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 if {![info exists tk_version]} {package require Tk}
 wm withdraw .
 
-set version "2025-10-06"
+set version "2025-10-14"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -36,7 +36,7 @@ set cwd [pwd]
 
 # Required packages
 
-foreach item {Thread msgcat tooltip http md5} {
+foreach item {Thread msgcat tooltip http md5 zipfile::decode} {
   if {[catch "package require $item"]} {
     ::tk::MessageBox -title $title -icon error \
 	-message "Could not load required Tcl package '$item'" \
@@ -319,6 +319,7 @@ cd $cwd
 # and check operating system
 
 if {$tcl_platform(os) == "Windows NT"} {
+  package require registry
   set exe [file tail $qms_cmd]
   catch {exec TASKLIST /NH /FO CSV /FI "IMAGENAME eq $exe" \
 	/FI "USERNAME eq $tcl_platform(user)"} result
@@ -330,13 +331,8 @@ if {$tcl_platform(os) == "Windows NT"} {
     if {$rc == "no"} exit
     catch {exec TASKKILL /F /PID $pid /T}
   }
-  if {$language == ""} {
-    package require registry
-    set language [registry get \
-	{HKEY_CURRENT_USER\Control Panel\International} {LocaleName}]
-    set language [regsub {(.*)-(.*)} $language {\1}]
-  }
   if {![info exists env(TMP)]} {set env(TMP) $env(HOME)]}
+  append env(TMP) \\[format "TMS%8.8x" [pid]]
   set tmpdir [file normalize $env(TMP)]
   set nprocs $env(NUMBER_OF_PROCESSORS)
 } elseif {$tcl_platform(os) == "Linux"} {
@@ -349,11 +345,8 @@ if {$tcl_platform(os) == "Windows NT"} {
     if {$rc == "no"} exit
     catch {exec kill -SIGTERM $pid}
   }
-  if {$language == ""} {
-    set language [regsub {(.*)_(.*)} $env(LANG) {\1}]
-    if {$env(LANG) == "C"} {set language en}
-  }
   if {![info exists env(TMPDIR)]} {set env(TMPDIR) /tmp}
+  append env(TMPDIR) /[format "TMS%8.8x" [pid]]
   set tmpdir $env(TMPDIR)
   set nprocs [exec /usr/bin/nproc]
 } else {
@@ -713,19 +706,22 @@ set maps [lsort -dictionary $maps]
 if {[llength $maps] == 0} {error_message [mc e11] exit}
 
 # Get list of available Mapsforge themes
-# and add Mapsforge built-in themes
+# and add Mapsforge server's built-in themes
 
 cd $themes_folder
 set themes [find_files "" "*.xml"]
 cd $cwd
-lappend themes (OSMARENDER)
-if {$server_version >= 260100} {
-  lappend themes (BIKER) (DARK) (INDIGO) (MOTORIDER)
-} elseif {$server_version >= 250000} {
-  lappend themes (BIKER) (MOTORIDER)
-} elseif {$server_version >= 220000} {
-  lappend themes (MOTORIDER) (MOTORIDER_DARK)
+
+zipfile::decode::open $server_jar
+set dict [zipfile::decode::archive]
+set list [zipfile::decode::files $dict]
+foreach item [lsearch -inline -all $list "assets/mapsforge/*.xml"] {
+  zipfile::decode::copyfile $dict $item $tmpdir/$item
+  set item ([string toupper [file rootname [file tail $item]]])
+  if {$item != "(DEFAULT)" && $item != "(HILLSHADING)"} {lappend themes $item}
 }
+zipfile::decode::close
+
 set themes [lsort -dictionary $themes]
 set themes [linsert $themes 0 (DEFAULT)]
 
@@ -983,7 +979,9 @@ proc restore_task_settings {task} {
   lmap v ${::shading.asy.values} {set ::shading.asy.array($i) $v; incr i}
   update_shading_window
 
-  if {$theme_selection != ${::theme.selection}} {update_theme_styles_overlays}
+  if {${::theme.selection} ni $::themes} \
+	{set ::theme.selection [lindex $::themes 0]}
+  if {${::theme.selection} != $theme_selection} {update_theme_styles_overlays}
   if {[info exists ::style.id]} {
     set_selected_style_overlays ${::style.id} ${::overlay.ids}
     unset -nocomplain ::style.id ::overlay.ids
@@ -993,6 +991,7 @@ proc restore_task_settings {task} {
 
 # Preferred maps language (2 lowercase letters ISO 639-1 code)
 
+if {$language == ""} {set language $locale}
 if {![info exists maps.language]} {set maps.language $language}
 labelframe .lang -labelanchor w -text [mc l11]:
 pack .lang -in .f -expand 1 -fill x -pady 1
@@ -1359,14 +1358,14 @@ checkbutton .shading.zoom.min_apply -text [mc l891]: \
 entry .shading.zoom.min_value -textvariable shading.zoom.min.value \
 	-width 8 -justify right
 set .shading.zoom.min_value.minmax {0 20 9}
-tooltip .shading.zoom.min_value "0 ≤ [mc l891] ≤ 20"
+tooltip .shading.zoom.min_value "0 ≤ [mc l891] ≤ [mc l892]"
 checkbutton .shading.zoom.max_apply -text [mc l892]: \
 	-variable shading.zoom.max.apply \
 	-onvalue true -offvalue false -command update_shading_zoom_levels
 entry .shading.zoom.max_value -textvariable shading.zoom.max.value \
 	-width 8 -justify right
 set .shading.zoom.max_value.minmax {0 20 17}
-tooltip .shading.zoom.max_value "0 ≤ [mc l892] ≤ 20"
+tooltip .shading.zoom.max_value "[mc l891] ≤ [mc l892] ≤ 20"
 
 set row 0
 foreach item {min max} {
@@ -1777,33 +1776,19 @@ proc update_theme_styles_overlays {} {
   save_theme_settings
   destroy [winfo children .overlays]
 
-  set theme ${::theme.selection}
-  if {![regexp {^\(.*\)$} $theme] && ![file exists $::themes_folder/$theme]} {
-    # Theme file no longer exists, use built-in default
-    set ::theme.selection [lindex $::themes 0]
-  }
-
   # Read theme from server's assets or from file
 
+  set theme ${::theme.selection}
   if {[regexp {^\(.*\)$} $theme]} {
-    set rc [catch "package require zipfile::decode"]
-    if {!$rc} {
-      set file "assets/mapsforge/[string tolower [string trim $theme ()]].xml"
-      set rc [catch "zipfile::decode::open {$::server_jar}"]
-      if {!$rc} {
-	set dict [zipfile::decode::archive]
-	set rc [catch "zipfile::decode::getfile {$dict} {$file}" data]
-	zipfile::decode::close
-	if {$rc} {unset data} \
-	else {set data [encoding convertfrom utf-8 $data]}
-      }
-    }
+    set file [string tolower [string trim $theme ()]].xml
+    set file $::tmpdir/assets/mapsforge/$file
   } else {
-    set rc [catch "open {$::themes_folder/$theme} r" fd]
-    if {!$rc} {
-      set data [read $fd]
-      close $fd
-    }
+    set file $::themes_folder/$theme
+  }
+
+  if {![catch "open {$file} r" fd]} {
+    set data [read $fd]
+    close $fd
   }
 
   if {![info exists data]} {
@@ -1867,7 +1852,7 @@ proc update_theme_styles_overlays {} {
       array unset name
       array set name [get_element_attributes name [lindex $layer_data $index]]
       if {![info exists name(lang)]} continue
-      if {$name(lang) == $::language} {
+      if {$name(lang) == $::locale} {
 	set layer(name) $name(value)
 	break
       } elseif {$name(lang) == $defaultlang} {
@@ -2751,6 +2736,7 @@ while {1} {
     save_task_settings ${task.active}
     restore_task_settings (default)
     foreach item {global theme shading qmapshack} {save_${item}_settings}
+    catch {file delete -force $tmpdir}
     exit
   }
   unset action
@@ -2759,7 +2745,6 @@ while {1} {
 
 # Create server's temporary files folder
 
-append tmpdir /[format "TMS%8.8x" [pid]]
 file mkdir $tmpdir/tasks
 
 # Create server logging properties
@@ -2786,6 +2771,7 @@ if {${qms.conf} && ${qms.file} != ""} {
 set list {cachePath mapPath}
 lassign {} {*}$list
 if {[info exists file]} {
+cputs "qms file=$file"
   if {![catch {open $file r} fd]} {
     set data [split [read $fd] \n]
     close $fd
