@@ -18,9 +18,9 @@ i01	"Les paramètres utilisateur requis sont manquants,\nfichier '%s' introuvabl
 l01	"Mapsforge pour QMapShack"
 
 l02	"Tâche(s) du serveur"
-l02t	"Configurez la tâche affichée ou créez-en une nouvelle\net appuyez sur la touche Retour.\nCaractères valides pour les noms de tâches: A-Za-z0-9_.+-\nSélectionnez la tâche à configurer à l'aide\ndes touches haut ou bas ou de la molette de la souris."
+l02t	"Configurez la tâche affichée ou créez-en une nouvelle\net appuyez sur la touche Entrée.\nCaractères valides pour les noms de tâches: A-Za-z0-9_.+-\nSélectionnez la tâche à configurer à l'aide\ndes touches fléchées ↑ ou ↓ ou de la molette de la souris."
 l02e	"Nom de tâche '%s' non valide"
-l03t	"Activer ou désactiver les tâches du serveur avec le bouton 1 de la souris.\nSélectionnez la tâche à configurer ou à supprimer avec les touches haut ou bas.\nSupprimez la tâche sélectionnée avec la touche suppr.\nLa tâche par défaut est toujours activée et ne peut pas être supprimée."
+l03t	"Activer ou désactiver les tâches du serveur avec le bouton 1 de la souris.\nSélectionnez la tâche à configurer ou à supprimer avec les touches fléchées ↑ ou ↓.\nSupprimez la tâche sélectionnée avec la touche Suppr.\nLa tâche par défaut est toujours activée et ne peut pas être supprimée."
 
 l11	"Langue préférée des cartes Mapsforge"
 l11t	"2 lettres minuscules code ISO 639-1\nLangues des cartes prises en charge voir la console de sortie"
@@ -28,7 +28,7 @@ l13	"Dossier de cartes Mapsforge"
 l14	"Carte(s) Mapsforge"
 l14t	"Le bouton 1 de la souris sélectionne une carte\net désélectionne toutes les autres.\nMaj + bouton 1 de la souris étend la sélection.\nCtrl + bouton 1 de la souris bascule la sélection."
 l15	"Ajouter la carte Mapsforge du monde"
-l16	"Dossier de thème Mapsforge"
+l16	"Dossier de thèmes Mapsforge"
 l17	"Thème Mapsforge"
 l18	"Style du thème"
 

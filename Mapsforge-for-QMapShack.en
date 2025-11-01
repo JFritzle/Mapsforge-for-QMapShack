@@ -18,9 +18,9 @@ i01	"Mandatory user settings missing,\nfile '%s' not found"
 l01	"Mapsforge for QMapShack"
 
 l02	"Server task(s)"
-l02t	"Configure the displayed task or\ncreate a new one and hit Return key.\nValid task name characters: A-Za-z0.9_.+-\nSelect task to configure\nusing keys UP or DOWN or mouse wheel."
+l02t	"Configure the displayed task or\ncreate a new one and hit Enter key.\nValid task name characters: A-Za-z0.9_.+-\nSelect task to configure\nusing cursor keys ↑ or ↓ or mouse wheel."
 l02e	"Task name '%s' invalid"
-l03t	"Use mouse button 1 to turn server tasks on or off.\nSelect task to configure or delete using keys UP or DOWN.\nUse key DEL to delete selected task from configuration.\nThe default task is always turned on and cannot be deleted."
+l03t	"Use mouse button 1 to turn server tasks on or off.\nSelect task to configure or delete using cursor keys ↑ or ↓.\nUse key Delete to delete selected task from configuration.\nThe default task is always turned on and cannot be deleted."
 
 l11	"Preferred Mapsforge maps language"
 l11t	"2 lowercase letters ISO 639-1 code\nSee output console for supported map languages"

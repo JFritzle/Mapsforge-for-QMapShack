@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 if {![info exists tk_version]} {package require Tk}
 wm withdraw .
 
-set version "2025-10-14"
+set version "2025-11-01"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -315,36 +315,15 @@ foreach item $list {
 
 cd $cwd
 
-# Check if QMapShack already running
-# and check operating system
+# Check operating system
 
 if {$tcl_platform(os) == "Windows NT"} {
   package require registry
-  set exe [file tail $qms_cmd]
-  catch {exec TASKLIST /NH /FO CSV /FI "IMAGENAME eq $exe" \
-	/FI "USERNAME eq $tcl_platform(user)"} result
-  set result [split $result ,]
-  if {[llength $result] == 5} {
-    eval set pid [lindex $result 1]
-    set rc [messagebox -title $title -type yesno -default no -icon question \
-	-message [mc e01 QMapShack $exe $pid] -detail [mc e02]]
-    if {$rc == "no"} exit
-    catch {exec TASKKILL /F /PID $pid /T}
-  }
   if {![info exists env(TMP)]} {set env(TMP) $env(HOME)]}
   append env(TMP) \\[format "TMS%8.8x" [pid]]
   set tmpdir [file normalize $env(TMP)]
   set nprocs $env(NUMBER_OF_PROCESSORS)
 } elseif {$tcl_platform(os) == "Linux"} {
-  set exe [file tail $qms_cmd]
-  set rc [catch {exec pgrep -n -u $tcl_platform(user) $exe} result]
-  if {$rc == 0} {
-    set pid $result
-    set rc [messagebox -title $title -type yesno -default no -icon question \
-	-message [mc e01 QMapShack $exe $pid] -detail [mc e02]]
-    if {$rc == "no"} exit
-    catch {exec kill -SIGTERM $pid}
-  }
   if {![info exists env(TMPDIR)]} {set env(TMPDIR) /tmp}
   append env(TMPDIR) /[format "TMS%8.8x" [pid]]
   set tmpdir $env(TMPDIR)
@@ -352,6 +331,12 @@ if {$tcl_platform(os) == "Windows NT"} {
 } else {
   error_message [mc e03 $tcl_platform(os)] exit
 }
+
+# Create temporary files folder and delete on exit
+
+file mkdir $tmpdir
+rename ::exit ::quit
+proc exit {args} {catch {file delete -force $::tmpdir}; eval quit $args}
 
 # Trying to force Qt application QMapShack to use XCB instead of Wayland
 # to be able to handle X11 events, in particular WM_DELETE_WINDOW
@@ -678,15 +663,15 @@ foreach line [split $result \n] {
   set server_string $data
   set data [split $data .]
   if {[llength $data] != 4} \
-    {error_message [mc e07 "Mapsforge Server" $server_string 0.21.0.0] exit}
+    {error_message [mc e07 "Mapsforge Server" $server_string 0.22.0.0] exit}
   foreach item $data {set server_version [expr 100*$server_version+$item]}
   break
 }
 
 if {$rc || $server_version == 0} \
   {error_message [mc e08 Server [get_shell_command $command] $result] exit}
-if {$server_version < 210000} \
-  {error_message [mc e07 "Mapsforge Server" $server_string 0.21.0.0] exit}
+if {$server_version < 220000} \
+  {error_message [mc e07 "Mapsforge Server" $server_string 0.22.0.0] exit}
 
 # Recursively find files
 
@@ -886,6 +871,7 @@ proc task_name_update {} {
   set ::task.name $v
   set ::task.active $v
   restore_task_settings ${::task.active}
+  if {[process_running srv]} {srv_task_create $v}
 }
 
 proc task_item_toggle {} {
@@ -895,8 +881,10 @@ proc task_item_toggle {} {
   if {$v == "(default)"} return
   if {$i in [$lb curselection]} {
     $lb selection clear $i
+    if {[process_running srv]} {srv_task_delete $v}
   } else {
     $lb selection set $i
+    if {[process_running srv]} {srv_task_create $v}
   }
 }
 
@@ -916,6 +904,7 @@ proc task_item_delete {} {
   file delete $file
   set ::task.active [$lb get active]
   restore_task_settings ${::task.active}
+  if {[process_running srv]} {srv_task_delete $v}
 }
 
 proc task_item_add {} {
@@ -937,6 +926,8 @@ proc task_item_add {} {
     set ::task.name ${::task.active}
     return 0
   }
+  save_task_settings ${::task.active}
+  if {[process_running srv]} {srv_task_create $v}
   return 1
 }
 
@@ -1287,9 +1278,8 @@ proc choose_dem_folder {} {
 
 labelframe .shading.algorithm -labelanchor w -text [mc l83]:
 pack .shading.algorithm -expand 1 -fill x -pady 2
-set list {}
+set list {stdasy simplasy hiresasy}
 if {$server_version >= 230001} {lappend list adaptasy}
-if {$server_version >= 220000} {lappend list stdasy simplasy hiresasy}
 lappend list simple diffuselight
 combobox .shading.algorithm.values -width 12 \
 	-validate key -validatecommand {return 0} \
@@ -2347,7 +2337,8 @@ proc process_running {process} {
 
 proc srv_task_create {task} {
   set file $::ini_folder/task.$task.ini
-  if {![file exists $file]} continue
+  if {![file exists $file]} return
+
   set fd [open $file r]
   while {[gets $fd line] != -1} {
     regexp {^(.*?)=(.*)$} $line "" name value
@@ -2368,7 +2359,6 @@ proc srv_task_create {task} {
   # Configure subtasks
 
   foreach subtask {Map Hillshading} {
-
     set name [regsub ".(.default)." $subtask.$task ""]
     set file $::tmpdir/tasks/$name.properties
 
@@ -2440,7 +2430,6 @@ proc srv_task_create {task} {
     foreach {item value} $params {append data $item=$value\n}
     set md5 [md5 -hex [encoding convertto utf-8 $data]]
     if {[info exists ::md5_$name] && [set ::md5_$name] == $md5} continue
-    if {[info exists ::md5_$subtask] && [set ::md5_$subtask] == $md5} continue
 
     clean_mapsforge $name
     set fd [open $file w]
@@ -2454,8 +2443,8 @@ proc srv_task_create {task} {
 proc srv_task_delete {task} {
   foreach subtask {Map Hillshading} {
     set name [regsub ".(.default)." $subtask.$task ""]
-    set file $::tmpdir/tasks/$name.properties
     clean_mapsforge $name
+    set file $::tmpdir/tasks/$name.properties
     file delete $file
     unset -nocomplain ::md5_$name
   }
@@ -2736,16 +2725,38 @@ while {1} {
     save_task_settings ${task.active}
     restore_task_settings (default)
     foreach item {global theme shading qmapshack} {save_${item}_settings}
-    catch {file delete -force $tmpdir}
     exit
   }
   unset action
   if {[selection_ok]} break
 }
 
-# Create server's temporary files folder
+# Check if QMapShack already running
 
-file mkdir $tmpdir/tasks
+if {$tcl_platform(os) == "Windows NT"} {
+  package require registry
+  set exe [file tail $qms_cmd]
+  catch {exec TASKLIST /NH /FO CSV /FI "IMAGENAME eq $exe" \
+	/FI "USERNAME eq $tcl_platform(user)"} result
+  set result [split $result ,]
+  if {[llength $result] == 5} {
+    eval set pid [lindex $result 1]
+    set rc [messagebox -title $title -type yesno -default no -icon question \
+	-message [mc e01 QMapShack $exe $pid] -detail [mc e02]]
+    if {$rc == "no"} exit
+    catch {exec TASKKILL /F /PID $pid /T}
+  }
+} elseif {$tcl_platform(os) == "Linux"} {
+  set exe [file tail $qms_cmd]
+  set rc [catch {exec pgrep -n -u $tcl_platform(user) $exe} result]
+  if {$rc == 0} {
+    set pid $result
+    set rc [messagebox -title $title -type yesno -default no -icon question \
+	-message [mc e01 QMapShack $exe $pid] -detail [mc e02]]
+    if {$rc == "no"} exit
+    catch {exec kill -SIGTERM $pid}
+  }
+}
 
 # Create server logging properties
 
@@ -2757,6 +2768,10 @@ puts $fd "log4j.appender.stdout.Target=System.out"
 puts $fd "log4j.appender.stdout.layout=org.apache.log4j.PatternLayout"
 puts $fd "log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss.SSS} %m%n"
 close $fd
+
+# Create server's temporary files folder
+
+file mkdir $tmpdir/tasks
 
 # Get QMapShack's cache & map folder paths
 
@@ -2771,7 +2786,6 @@ if {${qms.conf} && ${qms.file} != ""} {
 set list {cachePath mapPath}
 lassign {} {*}$list
 if {[info exists file]} {
-cputs "qms file=$file"
   if {![catch {open $file r} fd]} {
     set data [split [read $fd] \n]
     close $fd
@@ -2852,7 +2866,6 @@ if {[process_running qms]} {process_kill qms}
 catch {exec /bin/true}
 
 # Delete file Mapsforge tms file(s) and tile cache folder(s)
-# Delete temporary files folder
 
 foreach task ${task.use} {
   foreach subtask {Map Hillshading} {
@@ -2860,7 +2873,6 @@ foreach task ${task.use} {
     clean_mapsforge $name
   }
 }
-catch {file delete -force $tmpdir}
 
 # Unmap main toplevel window
 

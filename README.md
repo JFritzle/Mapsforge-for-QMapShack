@@ -6,13 +6,6 @@ QMapShack currently does not support local Mapsforge maps out of the box. Prebui
 
 QMapShack however is able to handle maps provided as tiles by a [Tile Map Service](https://en.wikipedia.org/wiki/Tile_Map_Service) (TMS), which is mainly used by web mapping servers. To make local Mapsforge maps nevertheless available within QMapShack, a local tile server can be set up to render these Mapsforge maps and to interact with QMapShack via TMS protocol. The corresponding tile server is available at this [mapsforgesrv](https://github.com/telemaxx/mapsforgesrv) repository.  
 
-While old *single task* server type was capable of rendering only one single set of parameters at a time, the new *multiple tasks* server type is capable of rendering multiple sets of parameters concurrently. Thus, one single *multiple tasks* server instance can replace multiple *single task* server instances.  
-**This Graphical user interface only supports the *multiple tasks* server type.**  
-Latest GUI supporting *single task* server type is still available in GitHub's [*legacy*](https://github.com/JFritzle/Mapsforge-for-QMapShack/tree/legacy) branch.
-
-Section [Mapsforge Maps](https://github.com/Maproom/qmapshack/wiki/DocBasicsMapDem#user-content-mapsforge-maps) of QMapShack’s wiki shortly describes how to set up an old type tile server and manually connect it to QMapShack by an appropriate TMS file. 
-
-
 ### Graphical user interface
 This project’s intension is to easily let the user interactively and comfortably select the numerous available options of tile server. In addition, option settings as well as position and font size of graphical user interface automatically get saved and restored. Tile server and QMapShack get started/restarted using these options without need to manually set up any configuration files. 
 
@@ -43,9 +36,7 @@ Open [mapsforgesrv releases](https://github.com/telemaxx/mapsforgesrv/releases).
 Download most recently released jar file _mapsforgesrv-fatjar.jar_ from _<release\>\_for\_java11_tasks_ assets.  
 Windows: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _%programfiles%/MapsforgeSrv_.  
 Linux: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
-Note:  
-New *multiple tasks* server type and server version 0.21.0.0 or higher is required.  
-Old *single task* server type and previous server versions are no longer supported.  
+Note: Server version 0.22.0.0 or higher is required.  
 
 4. Alternative Marlin rendering engine (optional, recommended)  
 [Marlin](https://github.com/bourgesl/marlin-renderer) is an open source Java2D rendering engine optimized for performance, replacing the standard built into Java. Download is available at [Marlin-renderer releases](https://github.com/bourgesl/marlin-renderer/releases).  
@@ -136,7 +127,7 @@ Screenshot of QMapShack showing Heidelberg (Germany) and using
 While console output of tile server and/or QMapShack can be informative and helpful to verify what is happening as well as to analyze errors, writing to console costs some performance. Therefore the console should be hidden if not needed. 
 * Built-in world map  
 Since the built-in [Mapsforge world map](https://download.mapsforge.org/maps/world/world.map) only shows the coastline, it only serves as a rough overview. Due to map's low resolution, coastlines show inaccurate at high resolution.  
-In order not to cover an accurate map, the built-in world map has been automatically deactivated at higher zoom levels since tile server version 0.21.0.3.    
+In order not to cover an accurate map, the built-in world map has been automatically deactivated at higher zoom levels.   
 Starting with server version 0.23.0.3, built-in world map is rendered with lower priority than user-defined accurate maps. Zoom level restriction was therefore removed. 
 * Hillshading  
   * When selecting "Hillshading on map", map and hillshading are rendered  into one single map.  
@@ -148,8 +139,9 @@ Same result can not be achieved by QMapShack's built-in hillshading
 * If QMapShack is showing rendered Mapsforge map a bit blurry, then within QMapShack  
   * first open “View -> Setup Map View” and set “Scale” to “Square”  
   * then hit “symbol grid” button at upper right corner above and set “Projection” to “World Mercator (OSM)”  
-   As with QMapShack 1.17.1, projection “World Mercator (OSM)” built-in settings have been changed. As a current workaround for QMapShack 1.17.1 until next version becomes released, replace “Projection & Datum” string manually from `EPSG:3857` to  
-      `+proj=merc +a=6378137 +b=6378137 +lat_ts=0.001 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +type=crs`
+   As with QMapShack 1.17.1, projection “World Mercator (OSM)” built-in settings have been changed. As a workaround for QMapShack 1.17.1, replace “Projection & Datum” string manually from `EPSG:3857` to  
+      `+proj=merc +a=6378137 +b=6378137 +lat_ts=0.001 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +type=crs`  
+  This workaround is no longer required for QMapShack 1.18.0 or newer.
  
 
 

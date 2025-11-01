@@ -1,3 +1,11 @@
+2025-11-01
+
+- Allow add/delete/toggle tasks while server is running
+- Check at "Start" button press if QMapShack already running
+- Dropped support of server version < 0.22.0.0
+- Corrected some localized texts
+- Minor script optimizations
+
 2025-10-14
 
 - Adding internal render themes dynamically from current server's assets
