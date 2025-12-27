@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 if {![info exists tk_version]} {package require Tk}
 wm withdraw .
 
-set version "2025-11-01"
+set version "2025-12-27"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -387,7 +387,7 @@ set max_zoom_level [expr min(20,$max_zoom_level)]
 set qms.conf 0
 set qms.file ""
 set qms.args ""
-set qms.default {splash 0 style Fusion scale 1.00 debug 0}
+set qms.default {splash 0 style Fusion scale 1.000 debug 0 highdpi 1}
 lmap {i v} ${qms.default} {set qms.$i $v}
 
 # Save/restore settings
@@ -673,6 +673,20 @@ if {$rc || $server_version == 0} \
 if {$server_version < 220000} \
   {error_message [mc e07 "Mapsforge Server" $server_string 0.22.0.0] exit}
 
+# Get QMapShack version
+
+set qms_version 0
+set qms_string unknown
+set command [list $qms_cmd -v]
+set rc [catch "exec $command 2>@1" result]
+if {!$rc} {
+  set line [lindex [split $result \n] 0]
+  regsub -nocase {^.* (.*)$} $line {\1} data
+  set qms_string $data
+  set data [split $data .]
+  foreach item $data {set qms_version [expr 100*$qms_version+$item]}
+}
+
 # Recursively find files
 
 proc find_files {folder pattern} {
@@ -734,18 +748,22 @@ pack .f
 
 # Server task(s)
 
-set task.active (default)
-set task.name ${task.active}
+set task.pattern "^\[0-9A-Za-z\]+(\[_.+-\]?\[0-9A-Za-z\]+)*$"
+set task.active ""
+set task.name ""
 
-lappend task.set (default)
+lappend task.set ""
 foreach task [glob -nocomplain -path $ini_folder/ \
-	-type f -tails task.*.ini] \
-	{lappend task.set [regsub {^task.(.*).ini$} $task {\1}]}
+	-type f -tails task.*.ini] {
+  set task [regsub {^task.(.*).ini$} $task {\1}]
+  if {![regexp ${task.pattern} $task]} continue
+  lappend task.set $task
+}
 set task.set [lsort -unique ${task.set}]
 
-lappend task.use (default)
+lappend task.use ""
 set task.use [lmap task ${task.set} \
-	{if {$task ni ${task.use}} continue;set task}]
+	{if {"$task" ni ${task.use}} continue;set task}]
 
 labelframe .task -labelanchor w -text "[mc l02]: " -bd 0
 entry .task.name -width 32 -textvariable task.name \
@@ -878,7 +896,7 @@ proc task_item_toggle {} {
   set lb .task_list.listbox
   set i [$lb index active]
   set v [$lb get $i]
-  if {$v == "(default)"} return
+  if {$v == ""} return
   if {$i in [$lb curselection]} {
     $lb selection clear $i
     if {[process_running srv]} {srv_task_delete $v}
@@ -893,7 +911,7 @@ proc task_item_delete {} {
   set sb .task_list.scrollbar
   set i [$lb index active]
   set v [$lb get $i]
-  if {$v == "(default)"} return
+  if {$v == ""} return
   $lb delete $i
   set ::task.set [lreplace ${::task.set} $i $i]
   set len [llength ${::task.set}]
@@ -916,7 +934,7 @@ proc task_item_add {} {
     save_task_settings ${::task.active}
     set ::task.active $v
     restore_task_settings ${::task.active}
-  } elseif {[regexp "^\[0-9A-Za-z\]+(\[_.+-\]?\[0-9A-Za-z\]+)*$" $v]} {
+  } elseif {[regexp ${::task.pattern} $v]} {
     save_task_settings ${::task.active}
     set ::task.active $v
     set ::task.set [lsort [lappend ::task.set $v]]
@@ -1642,6 +1660,19 @@ foreach widget {.server.port.value .server.maxconn.value} {
 # --- End of server settings
 # --- Begin of QMapShack settings
 
+set text QMapShack
+if {$::qms_version} {append text " $::qms_string"}
+label .qms.version -text $text
+pack .qms.version
+
+# Application path
+
+labelframe .qms.cmd -labelanchor nw -text [mc y00]:
+pack .qms.cmd -expand 1 -fill x -pady 1
+entry .qms.cmd.value -textvariable qms_cmd \
+	-state readonly -takefocus 0 -highlightthickness 0
+pack .qms.cmd.value -expand 1 -fill x
+
 # Configuration file
 
 checkbutton .qms.conf -text [mc y01]: -variable qms.conf
@@ -1704,14 +1735,20 @@ pack .qms.args.value -expand 1 -fill x
 
 labelframe .qms.scale -labelanchor w -text [mc y07]:
 tooltip .qms.scale [mc y07t]
-scale .qms.scale.scale -from 0.50 -to 2.50 -resolution 0.05 \
-	-orient horizontal -variable qms.scale
-bind .qms.scale.scale <Shift-ButtonRelease-1> "set qms.scale 1.00"
-label .qms.scale.value -textvariable qms.scale -width 4 \
+scale .qms.scale.scale -from 0.500 -to 2.500 -resolution [expr 1./60.] \
+	-digits 4 -orient horizontal -variable qms.scale
+bind .qms.scale.scale <Shift-ButtonRelease-1> "set qms.scale 1.000"
+label .qms.scale.value -textvariable qms.scale -width 5 \
 	-relief sunken
 pack .qms.scale -expand 1 -fill x -pady 1
-pack .qms.scale.value -side right -padx {3 0}
+pack .qms.scale.value -side right
 pack .qms.scale.scale -side right -padx {3 0} -expand 1 -fill x
+
+# High DPI scaling (Qt5 behavior)
+
+checkbutton .qms.highdpi -text [mc y08] -variable qms.highdpi \
+	-onvalue 0 -offvalue 1
+pack .qms.highdpi -expand 1 -fill x
 
 # Reset settings
 
@@ -1742,6 +1779,7 @@ proc get_element_attributes {name string} {
 proc find_overlays_for_layer {layer_id layers} {
   set overlays {}
   set layer_index [lsearch -exact -index 0 $layers $layer_id]
+  if {$layer_index < 0} {return $overlays}
   array set layer [lindex $layers [list $layer_index 1]]
   if {[info exists layer(parent)]} \
 	{lappend overlays {*}[find_overlays_for_layer $layer(parent) $layers]}
@@ -1892,6 +1930,7 @@ proc update_theme_styles_overlays {} {
     set overlays {}
     foreach overlay_id [find_overlays_for_layer $layer(id) $layers] {
       set overlay_index [lsearch -exact -index 0 $layers $overlay_id]
+      if {$overlay_index < 0} continue
       array unset overlay_layer
       array set overlay_layer [lindex $layers [list $overlay_index 1]]
       if {![info exists overlay_layer(enabled)]} \
@@ -2115,7 +2154,8 @@ proc save_global_settings {} {
 
 proc save_qmapshack_settings {} {
   save_settings $::ini_folder/qmapshack.ini \
-	qms.conf qms.file qms.debug qms.splash qms.style qms.args qms.scale \
+	qms.conf qms.file qms.debug qms.splash qms.style qms.args \
+	qms.scale qms.highdpi \
 	tcp.interface tcp.port task.use
 }
 
@@ -2181,7 +2221,8 @@ proc incr_font_size {incr} {
 	{if {[winfo exists $item]} {$item configure -justify left}}
   foreach item {.effects.user_scale .effects.text_scale \
 	.effects.symbol_scale .effects.line_scale \
-	.effects.gamma_scale .effects.contrast_scale} \
+	.effects.gamma_scale .effects.contrast_scale \
+	.qms.scale.scale} \
 	{if {[winfo exists $item]} {$item configure -width $height}}
   foreach item {. .overlays .shading .effects .server .qms} \
 	{resize_toplevel_window $item}
@@ -2359,7 +2400,7 @@ proc srv_task_create {task} {
   # Configure subtasks
 
   foreach subtask {Map Hillshading} {
-    set name [regsub ".(.default)." $subtask.$task ""]
+    set name [string trimright $subtask.$task .]
     set file $::tmpdir/tasks/$name.properties
 
     set params {}
@@ -2442,7 +2483,7 @@ proc srv_task_create {task} {
 
 proc srv_task_delete {task} {
   foreach subtask {Map Hillshading} {
-    set name [regsub ".(.default)." $subtask.$task ""]
+    set name [string trimright $subtask.$task .]
     clean_mapsforge $name
     set file $::tmpdir/tasks/$name.properties
     file delete $file
@@ -2600,14 +2641,26 @@ proc srv_stop {} {
 
 proc qms_start {} {
 
+  set debug [lsearch ${::qms.args} debug]
+  if {$debug != -1} {
+    if {$::tcl_platform(os) == "Windows NT"} {	# Microsoft Store app "WinDbg"
+      set debugger "$::env(LOCALAPPDATA)/Microsoft/WindowsApps/WinDbgX.exe"
+      lappend command cmd /c [file normalize $debugger]
+      set ::env(QT_WIN_DEBUG_CONSOLE) new
+    } elseif {$::tcl_platform(os) == "Linux"} {	# Terminal with "gdb"
+      lappend command x-terminal-emulator -e gdb --quiet --args
+    }
+  }
+
   lappend command $::qms_cmd
 
-  lappend command {*}${::qms.args}
+  lappend command {*}[lreplace ${::qms.args} $debug $debug]
   if {!${::qms.splash}} {lappend command --no-splash}
   if {${::qms.style} != ""} {lappend command --style ${::qms.style}}
   if {${::qms.conf} && ${::qms.file} != ""} {lappend command -c ${::qms.file}}
   if {${::qms.debug}} {lappend command -d}
   set ::env(QT_SCALE_FACTOR) ${::qms.scale}
+  set ::env(QT_ENABLE_HIGHDPI_SCALING) ${::qms.highdpi}
 
   set name "QMapShack \[QMS\]"
   cputi "[mc m54 $name] ..."
@@ -2723,7 +2776,7 @@ while {1} {
   vwait action
   if {$action == 0} {
     save_task_settings ${task.active}
-    restore_task_settings (default)
+    restore_task_settings ""
     foreach item {global theme shading qmapshack} {save_${item}_settings}
     exit
   }
@@ -2869,7 +2922,7 @@ catch {exec /bin/true}
 
 foreach task ${task.use} {
   foreach subtask {Map Hillshading} {
-    set name [regsub ".(.default)." $subtask.$task ""]
+    set name [string trimright $subtask.$task .]
     clean_mapsforge $name
   }
 }
@@ -2881,7 +2934,7 @@ wm withdraw .
 # Save settings to folder ini_folder
 
 save_task_settings ${task.active}
-restore_task_settings (default)
+restore_task_settings ""
 foreach item {global theme shading qmapshack} {save_${item}_settings}
 
 # Wait until output console window was closed

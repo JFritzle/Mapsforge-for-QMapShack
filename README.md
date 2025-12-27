@@ -4,16 +4,16 @@ Graphical user interface between Mapsforge tile server and QMapShack
 ### About
 QMapShack currently does not support local Mapsforge maps out of the box. Prebuilt Mapsforge maps are provided amongst others by [mapsforge.org](http://download.mapsforge.org) and [openandromaps.org](https://www.openandromaps.org). 
 
-QMapShack however is able to handle maps provided as tiles by a [Tile Map Service](https://en.wikipedia.org/wiki/Tile_Map_Service) (TMS), which is mainly used by web mapping servers. To make local Mapsforge maps nevertheless available within QMapShack, a local tile server can be set up to render these Mapsforge maps and to interact with QMapShack via TMS protocol. The corresponding tile server is available at this [mapsforgesrv](https://github.com/telemaxx/mapsforgesrv) repository.  
+QMapShack however is able to handle maps provided as tiles by a [Tile Map Service](https://en.wikipedia.org/wiki/Tile_Map_Service) (TMS), which is mainly used by web mapping tile servers. To make local Mapsforge maps nevertheless available within QMapShack, a local tile server can be set up to render these Mapsforge maps and to interact with QMapShack via TMS protocol. The corresponding Mapsforge tile server is available at this [mapsforgesrv](https://github.com/telemaxx/mapsforgesrv) repository.  
 
 ### Graphical user interface
-This project’s intension is to easily let the user interactively and comfortably select the numerous available options of tile server. In addition, option settings as well as position and font size of graphical user interface automatically get saved and restored. Tile server and QMapShack get started/restarted using these options without need to manually set up any configuration files. 
+This project’s intension is to easily let the user interactively and comfortably select the numerous available options of Mapsforge tile server. In addition, option settings as well as position and font size of graphical user interface automatically get saved and restored. Mapsforge tile server and QMapShack get started/restarted using these options without need to manually set up any configuration files. 
 
 Graphical user interface is a single script written in _Tcl/Tk_ scripting language and is executable on _Microsoft Windows_ and _Linux_ operating system. Language-neutral script file _Mapsforge-for-QMapShack.tcl_ requires an additional user settings file and at least one localized resource file. Additional files must follow _Tcl/Tk_ syntax rules too. 
 
 User settings file is named _Mapsforge-for-QMapShack.ini_. A template file is provided.
 
-Resource files are named _Mapsforge-for-QMapShack.<locale\>_, where _<locale\>_ matches locale’s 2 lowercase letters ISO 639-1 code. English localized resource file _Mapsforge-for-QMapShack.en_ and German localized resource file _Mapsforge-for-QMapShack.de_ are provided. Script can be easily localized to any other system’s locale by providing a corresponding resource file using English resource file as a template. 
+Resource files are named _Mapsforge-for-QMapShack.<locale\>_, where _<locale\>_ matches locale’s 2 lowercase letters ISO 639-1 code. English localized resource file _Mapsforge-for-QMapShack.en_, French localized resource file _Mapsforge-for-QMapShack.fr_ and German localized resource file _Mapsforge-for-QMapShack.de_ are provided. Script can be easily localized to any other system’s locale by providing a corresponding resource file using English resource file as a template. 
 
 Screenshot of graphical user interface: 
 ![GUI_Windows](https://github.com/user-attachments/assets/461700db-a89f-4117-92db-bdfd5aa09e4a)
@@ -24,19 +24,20 @@ Screenshot of graphical user interface:
 1.	QMapShack  
 Windows: If not yet installed, download and install latest QMapShack version from [download section](https://github.com/Maproom/qmapshack/releases).  
 Linux: If not yet installed, install QMapShack package using Linux package manager. (Ubuntu: _apt install qmapshack gdal-bin gdal-data proj-bin proj-data routino_)  
-Run QMapShack at least once and initialize map & cache folders by 'File -> Setup Map Paths'.
+Run QMapShack at least once and initialize map & cache folders by "File -> Setup Map Paths" before using _Mapsforge-for-QMapShack_.
 
 2.	Java runtime environment (JRE) or Java development kit (JDK)  
-JRE version 11 or higher is required. Each JDK contains JRE as subset.  
-Windows: If not yet installed, download and install JRE or JDK, e.g. from [Oracle](https://www.java.com) or [Adoptium](https://adoptium.net/de/temurin/releases).  
+JRE version 11 or higher is required. JRE version 17 or higher is recommended.  
+Each JDK contains JRE as subset.  
+Windows: If not yet installed, download and install JRE or JDK, e.g. from [Oracle](https://www.java.com), [OpenLogic](https://www.openlogic.com/openjdk-downloads) or [Adoptium](https://adoptium.net/de/temurin/releases).  
 Linux: If not yet installed, install JRE or JDK using Linux package manager. (Ubuntu: _apt install openjdk-<version\>-jre_ or _apt install openjdk-<version\>-jdk_ with required or newer _<version\>_)
 
 3.	Mapsforge tile server  
 Open [mapsforgesrv releases](https://github.com/telemaxx/mapsforgesrv/releases).  
 Download most recently released jar file _mapsforgesrv-fatjar.jar_ from _<release\>\_for\_java11_tasks_ assets.  
-Windows: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _%programfiles%/MapsforgeSrv_.  
+Windows: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _%ProgramFiles%/MapsforgeSrv_.  
 Linux: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
-Note: Server version 0.22.0.0 or higher is required.  
+Note: Mapsforge tile server version 0.22.0.0 or higher is required.  
 
 4. Alternative Marlin rendering engine (optional, recommended)  
 [Marlin](https://github.com/bourgesl/marlin-renderer) is an open source Java2D rendering engine optimized for performance, replacing the standard built into Java. Download is available at [Marlin-renderer releases](https://github.com/bourgesl/marlin-renderer/releases).  
@@ -44,18 +45,20 @@ For JRE version lower than 17, download jar file _marlin-\*.jar_
 from _Marlin-renderer \<latest version> for JDK11+_ section's assets.  
 For JRE version 17 or higher, download jar file _marlin-\*.jar_  
 from _Marlin-renderer \<latest version> for JDK17+_ section's assets.  
-Windows: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _%programfiles%/MapsforgeSrv_.  
+Windows: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _%ProgramFiles%/MapsforgeSrv_.  
 Linux: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
 
 5.	Tcl/Tk scripting language version 8.6 or higher binaries  
 Windows: Download and install latest stable version of Tcl/Tk, currently 9.0.  
-See https://wiki.tcl-lang.org/page/Binary+Distributions for available binary distributions. Recommended Windows binary distribution is from [teclab’s tcltk](https://gitlab.com/teclabat/tcltk/-/packages) Windows repository. Select most recent installation file _tcltk90-9.0.\<x.y>.Win10.nightly.\<date>.tgz_. Unpack zipped tar archive (file extension _.tgz_) into your Tcl/Tk installation folder, e.g. _%programfiles%/Tcl_.  
+See https://wiki.tcl-lang.org/page/Binary+Distributions for available binary distributions. Recommended Windows binary distribution is from [teclab’s tcltk](https://gitlab.com/teclabat/tcltk/-/packages) Windows repository. Select most recent installation file _tcltk90-9.0.\<x.y>.Win10.nightly.\<date>.tgz_. Unpack zipped tar archive (file extension _.tgz_) into your Tcl/Tk installation folder, e.g. _%ProgramFiles%/Tcl_.  
 Note: [7-Zip](https://www.7-zip.org) file archiver/extractor is able to unpack _.tgz_ archives.   
 Linux: Install packages _tcl, tcllib, tcl-thread, tk_ and _tklib_ using Linux package manager.  
 (Ubuntu: _apt install tcl tcllib tcl-thread tk tklib_)
 
 6.	Mapsforge maps  
-Download Mapsforge maps for example from [openandromaps.org](https://www.openandromaps.org). Each downloaded OpenAndroMaps map archive contains a map file (file extension _.map_) and a points-of-interest file (file extension _.poi_). Tile server will render the former file, QMapShack is able to handle the latter file by itself.  
+Download Mapsforge maps for example from [openandromaps.org](https://www.openandromaps.org). Each downloaded OpenAndroMaps map archive contains a map file (file extension _.map_).   
+Note:  
+Mapsforge tile server itself does not use points-of-interest files (POI, file extension _.poi_) supplied for download there. As QMapShack is not able to handle this kind of POI files, QMapShack suitable POI files can be found [here](https://ftp.gwdg.de/pub/misc/openstreetmap/openandromaps/pois/mapsforge_old).  
 
 7.	Mapsforge themes  
 Mapsforge themes _Elevate_ and _Elements_ (file extension _.xml_) suitable for OpenAndroMaps are available for download at [openandromaps.org](https://www.openandromaps.org).  
@@ -75,16 +78,16 @@ While 1\" (arc second) resolution DEM data have a significantly higher accuracy 
 
 9.	Mapsforge for QMapShack graphical user interface script  
 Download language-neutral script file _Mapsforge-for-QMapShack.tcl_, user settings file _Mapsforge-for-QMapShack.ini_ and at least one localized resource file.  
-Windows: Copy downloaded files into Mapsforge tile server’s installation folder, e.g. into folder _%programfiles%/MapsforgeSrv_.  
+Windows: Copy downloaded files into Mapsforge tile server’s installation folder, e.g. into folder _%ProgramFiles%/MapsforgeSrv_.  
 Linux: Copy downloaded files into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
 Edit _user-defined script variables settings section_ of user settings file _Mapsforge-for-QMapShack.ini_ to match files and folders of your local installation of Java, Mapsforge tile server and QMapShack.  
 Important:  
-Always use character slash “/” as directory separator in script, for Microsoft Windows too!
+Always use character slash “/” as directory separator in _Mapsforge-for-QMapShack.ini_ file, for Microsoft Windows too!
 
 ### Script file execution
 
 Windows:  
-Associate file extension _.tcl_ to Tcl/Tk window shell’s binary _wish.exe_. Right-click script file and open file’s properties window. Change data type _.tcl_ to be opened by _Wish application_ e.g. by executable _%programfiles%/Tcl/bin/wish.exe_. Once file extension has been associated, double-click script file to run.
+Associate file extension _.tcl_ to Tcl/Tk window shell’s binary _wish.exe_. Right-click script file and open file’s properties window. Change data type _.tcl_ to be opened by _Wish application_ e.g. by executable _%ProgramFiles%/Tcl/bin/wish.exe_. Once file extension has been associated, double-click script file to run.
 
 Linux:  
 Either run script file from command line by
@@ -104,10 +107,11 @@ or associate file extension _.tcl_ to Tcl/Tk window shell’s binary _/usr/bin/w
 
 ### Usage
 
-* After selecting tasks(s), map(s), theme file, theme style, style's overlays etc. in graphical user interface, hit _Start_ button to start tile server and QMapShack. When QMapShack has started successfully, activate QMapShack's map _Mapsforge_ to show map(s) selected in graphical user interface. If changing settings while QMapShack is running, a restart of tile server is required to adopt new settings. To restart server, hit _Start_ button again. As QMapShack was caching tiles already loaded with previous settings, it is necessary to clear QMapShack's tile cache, which happens at restart too. After restart, right-click QMapShack's maps list and force QMapShack to reload maps.
-* Closing either graphical user interface or QMapShack window also closes tile server.
+* After selecting tasks(s), map(s), theme file, theme style, style's overlays etc. in graphical user interface, hit _Start_ button to start Mapsforge tile server and QMapShack. When QMapShack has started successfully, activate QMapShack's map(s) _Mapsforge Map …_ to show map(s) and/or _Mapsforge Hillshading …_ to show hillshading selected in graphical user interface. When changing settings while QMapShack is running, a reload of maps is required to adopt new settings. To reload, first hit _Start_ button again and QMapShack's tile cache containing tiles already loaded with previous settings gets cleared.
+Second, right-click QMapShack's maps list and force QMapShack to reload maps.
+* Closing either graphical user interface or QMapShack window also closes Mapsforge tile server.
 * Use keyboard keys Ctrl-plus to increase and keyboard keys Ctrl-minus to decrease font size of graphical user interface and/or output console.
-* See output console for tile server’s and QMapShack's output.
+* See output console for Mapsforge tile server’s and QMapShack's output.
 
 ### Example
 
@@ -124,11 +128,11 @@ Screenshot of QMapShack showing Heidelberg (Germany) and using
 ### Hints
 
 * Output console  
-While console output of tile server and/or QMapShack can be informative and helpful to verify what is happening as well as to analyze errors, writing to console costs some performance. Therefore the console should be hidden if not needed. 
+While console output of Mapsforge tile server and/or QMapShack can be informative and helpful to verify what is happening as well as to analyze errors, writing to console costs some performance. Therefore the console should be hidden if not needed. 
 * Built-in world map  
 Since the built-in [Mapsforge world map](https://download.mapsforge.org/maps/world/world.map) only shows the coastline, it only serves as a rough overview. Due to map's low resolution, coastlines show inaccurate at high resolution.  
 In order not to cover an accurate map, the built-in world map has been automatically deactivated at higher zoom levels.   
-Starting with server version 0.23.0.3, built-in world map is rendered with lower priority than user-defined accurate maps. Zoom level restriction was therefore removed. 
+Starting with Mapsforge tile server version 0.23.0.3, built-in world map is rendered with lower priority than user-defined accurate maps. Zoom level restriction was therefore removed. 
 * Hillshading  
   * When selecting "Hillshading on map", map and hillshading are rendered  into one single map.  
 Same result can be achieved faster by not enabling hillshading in graphical user interface but enabling QMapShack's built-in hillshading.

@@ -1,3 +1,12 @@
+2025-12-27
+
+- Show QMapShack version when available
+- Show QMapShack path
+- Added switch to disable QMapShack high DPI scaling
+- Changed default task from "(default)" to ""
+- Fixed script aborting on missing overlay layer in xml theme file
+- Minor README modifications
+
 2025-11-01
 
 - Allow add/delete/toggle tasks while server is running
