@@ -57,7 +57,7 @@ See https://wiki.tcl-lang.org/page/Binary+Distributions for available binary dis
 Note: [7-Zip](https://www.7-zip.org) file archiver/extractor is able to unpack _.tgz_ archives.   
 **Linux**: Install packages _tcl, tcllib, tcl-thread, tk_, _tklib_, _x11-utils_  and _wmctrl_ using Linux package manager. 
 (Ubuntu: _apt install tcl tcllib tcl-thread tk tklib_ _x11-utils_ _wmctrl_)   
-**macOS**: If not yet installed, install _tcl-tk_ using _Homebrew_ package manager by _brew install tcl-tk_. Advanced users can either download additionally required Tcl/Tk package _tklib0.9_ from [sourceforge.net](https://sourceforge.net/projects/tcllib/files/tklib/0.9) and install into folder _/usr/local/Cellar/tcl-tk/*/lib/tklib0.9_ or simply copy _tklib0.9_ folder from an existing Windows or Linux installation of Tcl/Tk.  
+**macOS**: If not yet installed, install _tcl-tk_ using _Homebrew_ package manager by _brew install tcl-tk_. Unfortunately, _tklib_ containing required package _tooltip_ is not part of _tcl-tk_. Advanced users can either download _tklib0.9_ from [sourceforge.net](https://sourceforge.net/projects/tcllib/files/tklib/0.9) and install into folder _\<root>/Cellar/tcl-tk/\<version>/lib/tklib0.9_. Alternatively and easier: download Windows distribution mentioned above, extract subfolder _tklib0.9_ from archive and install as folder _\<root>/Cellar/tcl-tk/\<version>/lib/tklib0.9_.  
 
 6.	**Mapsforge maps**  
 Download Mapsforge maps for example from [openandromaps.org](https://www.openandromaps.org). Each downloaded OpenAndroMaps map archive contains a map file (file extension _.map_).   
