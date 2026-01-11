@@ -1,3 +1,12 @@
+2026-01-11
+
+- Extended scripts for macOS operating system:
+  Moved console into main thread (macOS GUI requirement!),
+  moved Mapsforge server and QMapShack completely into own threads
+  Extended operating system dependent code to include macOS
+  Extended README to include macOS
+- Redesigned communication between threads and console
+
 2025-12-27
 
 - Show QMapShack version when available

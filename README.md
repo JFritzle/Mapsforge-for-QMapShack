@@ -21,75 +21,77 @@ Screenshot of graphical user interface:
 
 ### Installation
 
-1.	QMapShack  
-Windows: If not yet installed, download and install latest QMapShack version from [download section](https://github.com/Maproom/qmapshack/releases).  
-Linux: If not yet installed, install QMapShack package using Linux package manager. (Ubuntu: _apt install qmapshack gdal-bin gdal-data proj-bin proj-data routino_)  
-Run QMapShack at least once and initialize map & cache folders by "File -> Setup Map Paths" before using _Mapsforge-for-QMapShack_.
+1.	**QMapShack**  
+**Windows**: If not yet installed, download and install latest QMapShack version from [download section](https://github.com/Maproom/qmapshack/releases).  
+**Linux**: If not yet installed, install QMapShack package using Linux package manager.  
+(Ubuntu: _apt install qmapshack gdal-bin gdal-data proj-bin proj-data routino_)  
+**Note**: Run QMapShack at least once and initialize map & cache folders by _File -> Setup Map Paths_ before using _Mapsforge-for-QMapShack_.  
 
-2.	Java runtime environment (JRE) or Java development kit (JDK)  
+2.	**Java runtime environment (JRE) or Java development kit (JDK)**  
 JRE version 11 or higher is required. JRE version 17 or higher is recommended.  
 Each JDK contains JRE as subset.  
-Windows: If not yet installed, download and install JRE or JDK, e.g. from [Oracle](https://www.java.com), [OpenLogic](https://www.openlogic.com/openjdk-downloads) or [Adoptium](https://adoptium.net/de/temurin/releases).  
-Linux: If not yet installed, install JRE or JDK using Linux package manager. (Ubuntu: _apt install openjdk-<version\>-jre_ or _apt install openjdk-<version\>-jdk_ with required or newer _<version\>_)
+**Windows**: If not yet installed, download and install JRE or JDK, e.g. from [Oracle](https://www.java.com), [OpenLogic](https://www.openlogic.com/openjdk-downloads) or [Adoptium](https://adoptium.net/de/temurin/releases).  
+**Linux**: If not yet installed, install JRE or JDK using Linux package manager.  
+(Ubuntu: _apt install openjdk-<version\>-jre_ or _apt install openjdk-<version\>-jdk_ with required or newer _<version\>_)  
+**macOS**: If not yet installed, install JDK using _Homebrew_ package manager by _brew install java_.  
 
-3.	Mapsforge tile server  
+3.	**Mapsforge tile server**  
 Open [mapsforgesrv releases](https://github.com/telemaxx/mapsforgesrv/releases).  
 Download most recently released jar file _mapsforgesrv-fatjar.jar_ from _<release\>\_for\_java11_tasks_ assets.  
-Windows: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _%ProgramFiles%/MapsforgeSrv_.  
-Linux: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
-Note: Mapsforge tile server version 0.22.0.0 or higher is required.  
+**Windows**: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _%ProgramFiles%/MapsforgeSrv_.  
+**Linux** / **macOS**: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
+**Note**: Mapsforge tile server version 0.22.0.0 or higher is required.  
 
-4. Alternative Marlin rendering engine (optional, recommended)  
+4. **Alternative Marlin rendering engine** (optional, recommended)  
 [Marlin](https://github.com/bourgesl/marlin-renderer) is an open source Java2D rendering engine optimized for performance, replacing the standard built into Java. Download is available at [Marlin-renderer releases](https://github.com/bourgesl/marlin-renderer/releases).  
 For JRE version lower than 17, download jar file _marlin-\*.jar_  
 from _Marlin-renderer \<latest version> for JDK11+_ section's assets.  
 For JRE version 17 or higher, download jar file _marlin-\*.jar_  
 from _Marlin-renderer \<latest version> for JDK17+_ section's assets.  
-Windows: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _%ProgramFiles%/MapsforgeSrv_.  
-Linux: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
+**Windows**: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _%ProgramFiles%/MapsforgeSrv_.  
+**Linux** / **macOS**: Copy downloaded jar file into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
 
-5.	Tcl/Tk scripting language version 8.6 or higher binaries  
-Windows: Download and install latest stable version of Tcl/Tk, currently 9.0.  
+5.	**Tcl/Tk scripting language version 8.6 or higher binaries**  
+**Windows**: Download and install latest stable version of Tcl/Tk, currently 9.0.  
 See https://wiki.tcl-lang.org/page/Binary+Distributions for available binary distributions. Recommended Windows binary distribution is from [teclab’s tcltk](https://gitlab.com/teclabat/tcltk/-/packages) Windows repository. Select most recent installation file _tcltk90-9.0.\<x.y>.Win10.nightly.\<date>.tgz_. Unpack zipped tar archive (file extension _.tgz_) into your Tcl/Tk installation folder, e.g. _%ProgramFiles%/Tcl_.  
 Note: [7-Zip](https://www.7-zip.org) file archiver/extractor is able to unpack _.tgz_ archives.   
-Linux: Install packages _tcl, tcllib, tcl-thread, tk_ and _tklib_ using Linux package manager.  
-(Ubuntu: _apt install tcl tcllib tcl-thread tk tklib_)
+**Linux**: Install packages _tcl, tcllib, tcl-thread, tk_, _tklib_, _x11-utils_  and _wmctrl_ using Linux package manager. 
+(Ubuntu: _apt install tcl tcllib tcl-thread tk tklib_ _x11-utils_ _wmctrl_)   
+**macOS**: If not yet installed, install _tcl-tk_ using _Homebrew_ package manager by _brew install tcl-tk_. Advanced users can either download additionally required Tcl/Tk package _tklib0.9_ from [sourceforge.net](https://sourceforge.net/projects/tcllib/files/tklib/0.9) and install into folder _/usr/local/Cellar/tcl-tk/*/lib/tklib0.9_ or simply copy _tklib0.9_ folder from an existing Windows or Linux installation of Tcl/Tk.  
 
-6.	Mapsforge maps  
+6.	**Mapsforge maps**  
 Download Mapsforge maps for example from [openandromaps.org](https://www.openandromaps.org). Each downloaded OpenAndroMaps map archive contains a map file (file extension _.map_).   
-Note:  
+**Note**:  
 Mapsforge tile server itself does not use points-of-interest files (POI, file extension _.poi_) supplied for download there. As QMapShack is not able to handle this kind of POI files, QMapShack suitable POI files can be found [here](https://ftp.gwdg.de/pub/misc/openstreetmap/openandromaps/pois/mapsforge_old).  
 
-7.	Mapsforge themes  
+7.	**Mapsforge themes**  
 Mapsforge themes _Elevate_ and _Elements_ (file extension _.xml_) suitable for OpenAndroMaps are available for download at [openandromaps.org](https://www.openandromaps.org).  
-Note:  
-In order "Hillshading on map" to be applied to rendered map tiles, hillshading has to be enabled in theme file too. _Elevate_ and _Elements_ themes version 5 or higher do enable hillshading.
+**Note**:  
+In order "Hillshading on map" to be applied to rendered map tiles, hillshading has to be enabled in theme file too. _Elevate_ and _Elements_ themes version 5 or higher do enable hillshading.  
 
-8. DEM data (optional, required for hillshading)  
-Download and store DEM (Digital Elevation Model) data for the regions to be rendered.
-Notes:  
+8. **DEM data** (optional, required for hillshading)  
+Download and store DEM (Digital Elevation Model) data for the regions to be rendered.  
+**Notes**:  
 Either HGT files or ZIP archives containing 1 single equally named HGT file may be supplied.  
 Example: ZIP archive N49E008.zip containing 1 single HGT file N49E008.hgt.  
 While 1\" (arc second) resolution DEM data have a significantly higher accuracy than 3\" resolution, hillshading assumes significantly much more time. Therefore 3\" resolution usually is better choice.  
     
    \- HGT files with 3\" resolution SRTM (Shuttle Radar Topography Mission) data are available for whole world at [viewfinderpanoramas.org](http://www.viewfinderpanoramas.org/Coverage%20map%20viewfinderpanoramas_org3.htm). Unzip downloaded ZIP files to DEM folder.  
 \- HGT files with 1\" resolution DEM data are available for selected regions at [viewfinderpanoramas.org](http://www.viewfinderpanoramas.org/Coverage%20map%20viewfinderpanoramas_org1.htm). Unzip downloaded ZIP files to DEM folder.  
-\- ZIP archives with 3\" and 1\" resolution compiled and resampled by Sonny are available for selected regions at [Sonny's Digital LiDAR Terrain Models of European Countries](https://sonny.4lima.de). LiDAR data where available are more precise than SRTM data. Store downloaded ZIP files to DEM folder.
+\- ZIP archives with 3\" and 1\" resolution compiled and resampled by Sonny are available for selected regions at [Sonny's Digital LiDAR Terrain Models of European Countries](https://sonny.4lima.de). LiDAR data where available are more precise than SRTM data. Store downloaded ZIP files to DEM folder.  
 
-9.	Mapsforge for QMapShack graphical user interface script  
+9.	**Mapsforge for QMapShack graphical user interface script**  
 Download language-neutral script file _Mapsforge-for-QMapShack.tcl_, user settings file _Mapsforge-for-QMapShack.ini_ and at least one localized resource file.  
-Windows: Copy downloaded files into Mapsforge tile server’s installation folder, e.g. into folder _%ProgramFiles%/MapsforgeSrv_.  
-Linux: Copy downloaded files into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
-Edit _user-defined script variables settings section_ of user settings file _Mapsforge-for-QMapShack.ini_ to match files and folders of your local installation of Java, Mapsforge tile server and QMapShack.  
-Important:  
-Always use character slash “/” as directory separator in _Mapsforge-for-QMapShack.ini_ file, for Microsoft Windows too!
+**Windows**: Copy downloaded files into Mapsforge tile server’s installation folder, e.g. into folder _%ProgramFiles%/MapsforgeSrv_.  
+**Linux** / **macOS**: Copy downloaded files into Mapsforge tile server’s installation folder, e.g. into folder _~/MapsforgeSrv_.  
+**Note**: Edit _user-defined script variables settings section_ of user settings file _Mapsforge-for-QMapShack.ini_ to match files and folders of your local installation of Java, Mapsforge tile server and QMapShack. Always use character slash “/” as directory separator in _Mapsforge-for-QMapShack.ini_ file, for Microsoft Windows too!  
 
 ### Script file execution
 
-Windows:  
-Associate file extension _.tcl_ to Tcl/Tk window shell’s binary _wish.exe_. Right-click script file and open file’s properties window. Change data type _.tcl_ to be opened by _Wish application_ e.g. by executable _%ProgramFiles%/Tcl/bin/wish.exe_. Once file extension has been associated, double-click script file to run.
+**Windows**:  
+Associate file extension _.tcl_ to Tcl/Tk window shell’s binary _wish.exe_. Right-click script file and open file’s properties window. Change data type _.tcl_ to be opened by _Wish application_ e.g. by executable _%ProgramFiles%/Tcl/bin/wish.exe_. Once file extension has been associated, double-click script file to run.  
 
-Linux:  
+**Linux**:  
 Either run script file from command line by
 ```
 wish <path-to-script>/Mapsforge-for-QMapShack.tcl
@@ -103,7 +105,17 @@ Terminal=false
 Name=Mapsforge-for-QMapShack
 Exec=wish <path-to-script>/Mapsforge-for-QMapShack.tcl
 ```
-or associate file extension _.tcl_ to Tcl/Tk window shell’s binary _/usr/bin/wish_ and run script file by double-click file in file manager.
+or associate file extension _.tcl_ to Tcl/Tk window shell’s binary _/usr/bin/wish_ to run script file by double-click file in file manager.  
+
+**macOS**:  
+Either run script file from command line by
+```
+wish <path-to-script>/Mapsforge-for-QMapShack.tcl
+```
+
+or use _Automator -> Application -> Run Shell Script -> /usr/local/bin/wish \"$@\"_ to create an application for Tcl/Tk window shell’s binary _wish_, then associate all _.tcl_ files to this application and run script file by double-click file in file manager.
+
+Having _.tcl_ files associated to this application, a desktop starter from script file can be created by _Make Alias_ and dragging the alias and dropping it to desktop.  
 
 ### Usage
 

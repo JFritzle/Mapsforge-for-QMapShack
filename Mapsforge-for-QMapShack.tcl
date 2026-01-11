@@ -22,10 +22,10 @@ if {[encoding system] != "utf-8"} {
    exit [source $argv0]
 }
 
-if {![info exists tk_version]} {package require Tk}
+package require Tk
 wm withdraw .
 
-set version "2025-12-27"
+set version "2026-01-11"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -47,7 +47,6 @@ foreach item {Thread msgcat tooltip http md5 zipfile::decode} {
 
 # Procedure aliases
 
-interp alias {} ::send {} ::thread::send
 interp alias {} ::mc {} ::msgcat::mc
 interp alias {} ::messagebox {} ::tk::MessageBox
 interp alias {} ::tooltip {} ::tooltip::tooltip
@@ -127,10 +126,11 @@ Tooltip*Label.padY 2
 style theme use clam
 
 if {$tcl_version > 8.6} {
-  if {$tcl_platform(os) == "Windows NT"} \
-	{lassign {23 41 101 69 120} ry ul ll cy ht}
-  if {$tcl_platform(os) == "Linux"} \
-	{lassign { 3 21  81 49 100} ry ul ll cy ht}
+  switch $tcl_platform(os) {
+    "Windows NT" {lassign {23 41 101 69 120} ry ul ll cy ht}
+    "Linux"	 -
+    "Darwin"	 {lassign { 3 21  81 49 100} ry ul ll cy ht}
+  }
   set CheckOff "
 	<rect width='94' height='94' x='3' y='$ry'
 	style='fill:white;stroke-width:3;stroke:black'/>
@@ -163,8 +163,11 @@ if {$tcl_version > 8.6} {
   }
 }
 
-if {$tcl_platform(os) == "Windows NT"}	{lassign {1 1} yb yc}
-if {$tcl_platform(os) == "Linux"}	{lassign {0 2} yb yc}
+switch $tcl_platform(os) {
+  "Windows NT"	{lassign {1 1} yb yc}
+  "Linux"	-
+  "Darwin"	{lassign {0 2} yb yc}
+}
 foreach {item option value} {
 . background $colorBackground
 . bordercolor $colorBorder
@@ -201,27 +204,11 @@ foreach item {TButton TCheckbutton TRadiobutton} \
 	{bind $item <Return> {%W invoke}}
 bind TCombobox <Return> {event generate %W <Button-1>}
 
-bind Entry <FocusIn> {grab %W}
-bind Entry <Tab> {grab release %W}
-foreach item {Button-1 Control-Button-1 Shift-Button-1} \
-	{bind Entry <$item> "+entry-button-1 $item %W %X %Y"}
-
 proc scale_updown {w d} {$w set [expr [$w get]+$d*[$w cget -resolution]]}
 bind Scale <MouseWheel> {scale_updown %W [expr %D>0?+1:-1]}
 bind Scale <Button-4> {scale_updown %W -1}
 bind Scale <Button-5> {scale_updown %W +1}
 bind Scale <Button-1> {+focus %W}
-
-proc entry-button-1 {E W X Y} {
-  set w [winfo containing $X $Y]
-  if {"$w" == "$W"} {focus $W; return}
-  grab release $W
-  if {"$w" == ""} return
-  focus -force $w
-  update
-  event generate $w <$E> \
-	-x [expr $X-[winfo rootx $w]] -y [expr $Y-[winfo rooty $w]]
-}
 
 # Bitmap arrow down
 
@@ -290,8 +277,11 @@ set cmds {java_cmd qms_cmd}
 set list [concat $cmds ini_folder maps_folder themes_folder server_jar]
 
 set drive [regsub {((^.:)|(^//[^/]*)||(?:))(?:.*$)} $cwd {\1}]
-if {$tcl_platform(os) == "Windows NT"}	{cd $env(SystemDrive)/}
-if {$tcl_platform(os) == "Linux"}	{cd /}
+switch $tcl_platform(os) {
+  "Windows NT"	{cd $env(SystemDrive)/}
+  "Linux"	-
+  "Darwin"	{cd /}
+}
 
 foreach item $list {
   if {![info exists $item]} continue
@@ -328,8 +318,14 @@ if {$tcl_platform(os) == "Windows NT"} {
   append env(TMPDIR) /[format "TMS%8.8x" [pid]]
   set tmpdir $env(TMPDIR)
   set nprocs [exec /usr/bin/nproc]
+} elseif {$tcl_platform(os) == "Darwin"} {
+  if {![info exists env(TMPDIR)]} {set env(TMPDIR) /tmp}
+  append env(TMPDIR) /[format "TMS%8.8x" [pid]]
+  set tmpdir $env(TMPDIR)
+  set nprocs [exec sysctl -n hw.ncpu]
 } else {
-  error_message [mc e03 $tcl_platform(os)] exit
+  messagebox -title $title -icon error -message [mc e03 $tcl_platform(os)]
+  exit
 }
 
 # Create temporary files folder and delete on exit
@@ -441,122 +437,100 @@ wm resizable . 0 0
 
 set console 0;			# Valid values: 0=hide, 1=show
 
-set ctid [thread::create -joinable "
-  package require Tk
-  package require tcl::chan::fifo2
-  wm withdraw .
-  wm title . \"$title - [mc l99]\"
-  set font_size ${console.font.size}
-  set geometry {${console.geometry}}
-  ttk::style theme use clam
-  ttk::style configure . -border $colorBorder -troughcolor $colorTrough
-  thread::wait
-  "]
+toplevel .console
+wm withdraw .console
+wm title .console "$title - [mc l99]"
+ttk::style configure .console -border $colorBorder -troughcolor $colorTrough
 
-proc ctsend {script} "return \[send $ctid \$script\]"
+set family [font configure TkFixedFont -family]
+foreach item {Consolas "Ubuntu Mono" "Noto Mono" "Liberation Mono" \
+	"SF Mono"} {
+  if {$item ni [font families]} continue
+  set family $item
+  break
+}
+font create console_font -family $family -size ${console.font.size}
 
-ctsend {
-  foreach item {Consolas "Ubuntu Mono" "Noto Mono" "Liberation Mono"
-  	[font configure TkFixedFont -family]} {
-    set family [lsearch -nocase -exact -inline [font families] $item]
-    if {$family != ""} break
-  }
-  font create font -family $family -size $font_size
-  text .txt -font font -wrap none -setgrid 1 -state disabled -undo 0 \
-	-width 120 -xscrollcommand {.sbx set} \
-	-height 24 -yscrollcommand {.sby set}
-  ttk::scrollbar .sbx -orient horizontal -command {.txt xview}
-  ttk::scrollbar .sby -orient vertical   -command {.txt yview}
-  grid .txt -row 1 -column 1 -sticky nswe
-  grid .sby -row 1 -column 2 -sticky ns
-  grid .sbx -row 2 -column 1 -sticky we
-  grid columnconfigure . 1 -weight 1
-  grid rowconfigure    . 1 -weight 1
+text .console.txt -font console_font -wrap none -setgrid 1 \
+	-state disabled -undo 0 -bg white \
+	-width 120 -xscrollcommand {.console.sbx set} \
+	-height 24 -yscrollcommand {.console.sby set}
+ttk::scrollbar .console.sbx -orient horizontal -command {.console.txt xview}
+ttk::scrollbar .console.sby -orient vertical   -command {.console.txt yview}
+grid .console.txt -row 1 -column 1 -sticky nswe
+grid .console.sby -row 1 -column 2 -sticky ns
+grid .console.sbx -row 2 -column 1 -sticky we
+grid columnconfigure .console 1 -weight 1
+grid rowconfigure    .console 1 -weight 1
 
-  bind .txt <Control-a> {%W tag add sel 1.0 end;break}
-  bind .txt <Control-c> {tk_textCopy %W;break}
-  bind . <Control-plus>  {incr_font_size +1}
-  bind . <Control-minus> {incr_font_size -1}
-  bind . <Control-KP_Add>      {incr_font_size +1}
-  bind . <Control-KP_Subtract> {incr_font_size -1}
+if {${console.geometry} != ""} {
+  lassign ${console.geometry} x y cols rows
+  if {$x > [expr [winfo vrootx .console]+[winfo vrootwidth .console]] ||
+      $x < [winfo vrootx .console]} {set x [winfo vrootx .console]}
+  wm positionfrom .console program
+  catch "wm geometry .console ${cols}x${rows}+$x+$y"
+}
 
-  bind . <Configure> {
-    if {"%W" != "."} continue
-    scan [wm geometry %W] "%%dx%%d+%%d+%%d" cols rows x y
-    set geometry "$x $y $cols $rows"
-  }
+bind .console.txt <Control-a> {%W tag add sel 1.0 end;break}
+bind .console.txt <Control-c> {tk_textCopy %W;break}
+bind .console <Control-plus>  {console_font_size_incr +1}
+bind .console <Control-minus> {console_font_size_incr -1}
+bind .console <Control-KP_Add>      {console_font_size_incr +1}
+bind .console <Control-KP_Subtract> {console_font_size_incr -1}
 
-  proc incr_font_size {incr} {
-    set px [.txt xview]
-    set py [.txt yview]
-    set size [font configure font -size]
-    incr size $incr
-    if {$size < 5 || $size > 20} return
-    font configure font -size $size
-    update idletasks
-    .txt xview moveto [lindex $px 0]
-    .txt yview moveto [lindex $py 0]
-  }
+bind .console <Configure> {
+  if {"%W" != ".console"} continue
+  scan [wm geometry %W] "%%dx%%d+%%d+%%d" cols rows x y
+  set console.geometry "$x $y $cols $rows"
+}
 
-  proc write {text} {
-    .txt configure -state normal
-    foreach item [split $text \n] {
-      if {[string index $item 0] == "\r"} {
+proc console_font_size_incr {incr} {
+  set px [.console.txt xview]
+  set py [.console.txt yview]
+  set size [font configure console_font -size]
+  incr size $incr
+  if {$size < 5 || $size > 20} return
+  font configure console_font -size $size
+  set ::console.font.size $size
+  update idletasks
+  .console.txt xview moveto [lindex $px 0]
+  .console.txt yview moveto [lindex $py 0]
+}
+
+proc console_write {text} {
+  .console.txt configure -state normal
+  foreach item [split $text \n] {
+    if {[string index $item 0] == "\r"} {
 	set item [string range $item 1 end]
-	.txt delete end-2l end-1l
-      }
-      if {[string index $item end] == "\b"} {
+	.console.txt delete end-2l end-1l
+    }
+    if {[string index $item end] == "\b"} {
 	set item [string range $item 0 end-1]
-      } else {
-	append item \n
-      }
-      .txt insert end $item
-    }
-    .txt configure -state disabled
-    if {[winfo ismapped .]} {.txt see end}
-  }
-
-  proc show_hide {show} {
-    if {$show} {
-      .txt see end
-      if {$::geometry == ""} {
-	wm deiconify .
-      } else {
-	lassign $::geometry x y cols rows
-	if {$x > [expr [winfo vrootx .]+[winfo vrootwidth .]] ||
-	    $x < [winfo vrootx .]} {set x [winfo vrootx .]}
-	wm positionfrom . program
-	wm geometry . ${cols}x${rows}+$x+$y
-	wm deiconify .
-	wm geometry . +$x+$y
-      }
     } else {
-      wm withdraw .
+	append item \n
     }
+    .console.txt insert end $item
   }
-
-  lassign [::tcl::chan::fifo2] fdi fdo
-  thread::detach $fdo
-  fconfigure $fdi -blocking 0 -buffering full -buffersize 131072 -translation lf
-  fileevent $fdi readable "
-    set text {}
-    while {\[gets $fdi line\] >= 0} {lappend text \$line}
-    write \[join \$text \\n\]
-  "
+  .console.txt configure -state disabled
+  if {[winfo ismapped .console]} {.console.txt see end}
 }
 
-set fdo [ctsend "set fdo"]
-thread::attach $fdo
-fconfigure $fdo -blocking 0 -buffering line -translation lf
-interp alias {} ::cputs {} ::puts $fdo
-
-if {$console == 1} {
-  set console.show 1
-  ctsend "show_hide 1"
+proc console_show_hide {show} {
+  if {$show} {
+    .console.txt see end
+    wm attributes .console -topmost 1
+    wm deiconify .console
+    wm attributes .console -topmost 0
+  } else {
+    wm withdraw .console
+  }
 }
+
+if {$console == 1} {console_show_hide 1}
 
 # Write to console
 
+proc cputs {text} {console_write $text}
 proc cputi {text} {cputs "\[---\] $text"}
 proc cputw {text} {cputs "\[+++\] $text"}
 
@@ -646,10 +620,11 @@ if {$java_version < $java_version_min} \
 # to force same Java executable for nested Java calls
 
 set path [file dirname $java_cmd]
-if {$tcl_platform(os) == "Windows NT"} \
-	{set env(PATH) "[file nativename $path]\;$env(PATH)"}
-if {$tcl_platform(os) == "Linux"} \
-	{set env(PATH) "$path:$env(PATH)"}
+switch $tcl_platform(os) {
+  "Windows NT"	{set env(PATH) "[file nativename $path]\;$env(PATH)"}
+  "Linux"	-
+  "Darwin"	{set env(PATH) "$path:$env(PATH)"}
+}
 
 # Evaluate numeric Mapsforge server version
 # from output line ending with version string " version: x.y.z.c"
@@ -683,8 +658,10 @@ if {!$rc} {
   set line [lindex [split $result \n] 0]
   regsub -nocase {^.* (.*)$} $line {\1} data
   set qms_string $data
-  set data [split $data .]
-  foreach item $data {set qms_version [expr 100*$qms_version+$item]}
+  if {[regexp {^[0-9.]+$} $qms_string]} {
+    set data [split $data .]
+    foreach item $data {set qms_version [expr 100*$qms_version+$item]}
+  }
 }
 
 # Recursively find files
@@ -735,10 +712,11 @@ pack .title -expand 1 -fill x
 
 set github https://github.com/JFritzle/Mapsforge-for-QMapShack
 tooltip .title $github
-if {$tcl_platform(platform) == "windows"} \
-	{set exec "exec cmd.exe /C START {} $github"}
-if {$tcl_platform(os) == "Linux"} \
-	{set exec "exec nohup xdg-open $github >/dev/null"}
+switch $tcl_platform(os) {
+  "Windows NT"	{set exec "exec cmd.exe /C START {} $github"}
+  "Linux"	{set exec "exec nohup xdg-open $github >/dev/null"}
+  "Darwin"	{set exec "exec nohup open $github >/dev/null"}
+}
 bind .title <Button-1> "catch {$exec}"
 
 # Menu column
@@ -816,14 +794,15 @@ proc task_list_post {} {
 
   toplevel $tl -relief flat -bd 0
   wm withdraw $tl
-  switch -- [tk windowingsystem] {
-    x11 {
-      wm attributes $tl -type combo
-      wm overrideredirect $tl true
-    }
+  switch [tk windowingsystem] {
     win32 {
       wm overrideredirect $tl true
       wm attributes $tl -topmost 1
+    }
+    x11 -
+    aqua {
+      wm attributes $tl -type combo
+      wm overrideredirect $tl true
     }
   }
   wm geometry $tl +$x+$y
@@ -1027,7 +1006,7 @@ labelframe .maps -labelanchor nw -text [mc l14]:
 pack .maps -in .f -expand 1 -fill x -pady 1
 scrollbar .maps.scroll -command ".maps.values yview"
 listbox .maps.values -selectmode extended -activestyle none \
-	-takefocus 1 -exportselection 0 \
+	-takefocus 1 -exportselection 0 -relief sunken \
 	-width 0 -height [expr min([llength $maps],8)] \
 	-yscrollcommand ".maps.scroll set"
 pack .maps.scroll -side right -fill y
@@ -1136,25 +1115,15 @@ proc busy_state {state} {
 # Show/hide output console window (show with saved geometry)
 
 checkbutton .output -text [mc c99] \
-	-variable console.show -command show_hide_console
+	-variable console.show -command {console_show_hide ${console.show}}
 pack .output -expand 1 -fill x
+console_show_hide ${console.show}
 
-proc show_hide_console {} {
-  update idletasks
-  ctsend "show_hide ${::console.show}"
-}
-show_hide_console
-
+wm protocol .console WM_DELETE_WINDOW {.output invoke}
+bind .console <Double-ButtonRelease-3> {.output invoke}
 # Map/Unmap events are generated by Windows only!
-set tid [thread::id]
-ctsend "
-  wm protocol . WM_DELETE_WINDOW \
-	{thread::send -async $tid {.output invoke}}
-  bind . <Unmap> {if {\"%W\" == \".\"} \
-	{thread::send -async $tid {set console.show 0}}}
-  bind . <Map>   {if {\"%W\" == \".\"} \
-	{thread::send -async $tid {set console.show 1}}}
-"
+bind .console <Unmap> {if {"%W" == ".console"} {set console.show 0}}
+bind .console <Map>   {if {"%W" == ".console"} {set console.show 1}}
 
 # --- End of main window
 
@@ -1220,13 +1189,15 @@ proc position_toplevel_window {widget} {
   } elseif {[tk windowingsystem] == "x11"} {
     set bdwidth 2
     if {[auto_execok xwininfo] == ""} {
-      cputw "Please install program 'xwininfo' by Linux package manager"
+      cputw "Please install program 'xwininfo' by package manager"
       cputw "to evaluate exact window border width."
     } elseif {![catch {exec bash -c "export LANG=C;xwininfo -id [wm frame .] \
 	| grep Width | cut -d: -f2"} wmwidth]} {
       set bdwidth [expr ($wmwidth-$width)/2]
       set width $wmwidth
     }
+  } elseif {[tk windowingsystem] == "aqua"} {
+    set bdwidth [expr [winfo rootx .]-$x+1]
   }
   set reqwidth [winfo reqwidth $widget]
   set right [expr $x+$bdwidth+$width]
@@ -1248,10 +1219,10 @@ proc position_toplevel_window {widget} {
 # Global toplevel bindings
 
 foreach widget {. .overlays .shading .effects .server .qms} {
-  bind $widget <Control-plus>  {incr_font_size +1}
-  bind $widget <Control-minus> {incr_font_size -1}
-  bind $widget <Control-KP_Add>      {incr_font_size +1}
-  bind $widget <Control-KP_Subtract> {incr_font_size -1}
+  bind $widget <Control-plus>  {font_size_incr +1}
+  bind $widget <Control-minus> {font_size_incr -1}
+  bind $widget <Control-KP_Add>      {font_size_incr +1}
+  bind $widget <Control-KP_Subtract> {font_size_incr -1}
 }
 
 # --- Begin of hillshading
@@ -1710,10 +1681,10 @@ pack .qms.splash -expand 1 -fill x
 
 # Window style
 
-if {$tcl_platform(os) == "Windows NT"} {
-  set qtstyles {Fusion Windows Windows11 WindowsVista ""}
-} elseif {$tcl_platform(os) == "Linux"} {
-  set qtstyles {Fusion Windows ""}
+switch $tcl_platform(os) {
+  "Windows NT"	{set qtstyles {Fusion Windows Windows11 WindowsVista ""}}
+  "Linux"	-
+  "Darwin"	{set qtstyles {Fusion Windows ""}}
 }
 labelframe .qms.style -labelanchor w -text [mc y05]:
 pack .qms.style -expand 1 -fill x -pady 1
@@ -2138,9 +2109,6 @@ update_theme_selection
 proc save_global_settings {} {
   scan [wm geometry .] "%dx%d+%d+%d" width height x y
   set ::window.geometry "$x $y $width $height"
-  set ::font.size [font configure TkDefaultFont -size]
-  set ::console.geometry [ctsend "set geometry"]
-  set ::console.font.size [ctsend "font configure font -size"]
   save_settings $::ini_folder/global.ini \
 	rendering.engine maps.language \
 	maps.selection maps.world maps.contrast maps.gamma \
@@ -2191,13 +2159,14 @@ proc validate_number {widget event value sign number} {
 
 # Increase/decrease font size
 
-proc incr_font_size {incr} {
+proc font_size_incr {incr} {
   set size [font configure TkDefaultFont -size]
   if {$size < 0} {set size [expr round(-$size/[tk scaling])]}
   incr size $incr
   if {$size < 5 || $size > 20} return
   set fonts {TkDefaultFont TkTextFont TkFixedFont TkTooltipFont title_font}
   foreach item $fonts {font configure $item -size $size}
+  set ::font.size $size
   set height [expr [winfo reqheight .title]-2]
 
   if {$::tcl_version > 8.6} {
@@ -2207,8 +2176,11 @@ proc incr_font_size {incr} {
   } else {
     set size [expr round(($height+3)*0.6)]
     set padx [expr round($size*0.3)]
-    if {$::tcl_platform(os) == "Windows NT"} {set pady 0.1}
-    if {$::tcl_platform(os) == "Linux"} {set pady -0.1}
+    switch $::tcl_platform(os) {
+      "Windows NT" {set pady 0.1}
+      "Linux"	   -
+      "Darwin"	   {set pady -0.1}
+    }
     set pady [expr round($size*$pady)]
     set margin [list 0 $pady $padx 0]
     foreach item {TCheckbutton TRadiobutton} \
@@ -2296,16 +2268,19 @@ proc clean_mapsforge {task} {
 proc process_start {command process} {
 
   set tid [thread::create -joinable "
+    package require Thread
+    set sid [thread::id]
+    set process $process
     set command {$command}
     thread::wait
   "]
 
-  proc tsend {script} "return \[send $tid \$script\]"
+  proc tsend {script} "return \[thread::send $tid \$script\]"
 
-  set rc [tsend {catch {open "| $command 2>@1" r} result}]
-  set result [tsend "set result"]
+  set rc [tsend {catch {open "| $command 2>@1" r} fd}]
 
   if {$rc} {
+    set result [tsend "set fd"]
     thread::release $tid
     error_message $result return
     after 0 {set action 0}
@@ -2313,34 +2288,38 @@ proc process_start {command process} {
   }
 
   namespace eval $process {}
-  namespace upvar $process fd fd pid pid exe exe
+  namespace upvar $process pid pid exe exe
   set ${process}::command $command
+  set ${process}::tid $tid
 
-  set fd $result
-  set pid [tsend "pid $fd"]
-
+  set pid [tsend "pid \$fd"]
   set exe [file tail [lindex $command 0]]
-  set mark \[[string toupper $process]\]
-  cputi "[mc m51 $pid $exe] $mark"
-
-  tsend "thread::detach $fd"
-  thread::attach $fd
-  fconfigure $fd -blocking 0 -buffering full -buffersize 131072
-
   unset -nocomplain ::$process.eof
-  fileevent $fd readable "
-    set text {}
-    while {\[gets $fd line\] >= 0} {lappend text \"\\$mark \$line\"}
-    if {\$text != {}} {cputs \[join \$text \\n\]}
-    if {\[eof $fd\]} {
-      thread::release $tid
-      namespace delete $process
-      cputi \"\[mc m52 $pid $exe\] \\$mark\"
-      set $process.eof 1
-      set action 0
-      close $fd
-    }"
 
+  foreach item {m51 m52 m53} {tsend "set $item \"[mc $item $pid $exe]\""}
+
+  tsend {
+    proc cputs {text} "thread::send -async $sid \"console_write {\$text}\""
+    proc cputi {text} {cputs "\[---\] $text"}
+    set mark \[[string toupper $process]\]
+    cputi "$m51 $mark"
+
+    fconfigure $fd -blocking 0 -buffering full -buffersize 131072
+    fileevent $fd readable "
+      set text {}
+      while {\[gets $fd line\] >= 0} {lappend text \"\\$mark \$line\"}
+      if {\$text != {}} {cputs \[join \$text \\n\]}
+      if {\[eof $fd\]} {
+	cputi \"$m52 \\$mark\"
+	thread::send -async $sid \"
+	  namespace delete $process
+	  set $process.eof 1
+	  set action 0
+	  \"
+	thread::release
+	close $fd
+      }"
+  }
 }
 
 # Process kill
@@ -2348,14 +2327,15 @@ proc process_start {command process} {
 proc process_kill {process} {
 
   if {![process_running $process]} return
-  namespace upvar $process fd fd pid pid
+  namespace upvar $process tid tid pid pid
 
-  fileevent $fd readable [regsub {m52} [fileevent $fd readable] {m53}]
+  thread::send $tid {
+    fileevent $fd readable [regsub {m52} [fileevent $fd readable] {m53}]
+  }
 
   if {$::tcl_platform(os) == "Windows NT"} {
     catch {exec TASKKILL /F /PID $pid /T}
-  }
-  if {$::tcl_platform(os) == "Linux"} {
+  } elseif {$::tcl_platform(os) == "Linux" || $::tcl_platform(os) == "Darwin"} {
     set rc [catch {exec pgrep -P $pid} list]
     if {$rc} {set list $pid} else {lappend list $pid}
     foreach item $list {catch {exec kill -SIGTERM $item}}
@@ -2622,9 +2602,11 @@ proc srv_start {} {
 proc srv_stop {} {
 
   if {![process_running srv]} return
-  namespace upvar srv fd fd port port
+  namespace upvar srv tid tid port port
 
-  fileevent $fd readable [regsub "action" [fileevent $fd readable] "{}"]
+  thread::send $tid {
+    fileevent $fd readable [regsub "action" [fileevent $fd readable] "{}"]
+  }
 
   set url http://127.0.0.1:$port/terminate
   if {![catch {::http::geturl $url} token]} {
@@ -2702,7 +2684,7 @@ proc qms_stop {} {
     file delete $tmp.log
   } elseif {$::tcl_platform(os) == "Linux"} {
     if {[auto_execok wmctrl] == ""} {
-      cputw "Please install program 'wmctrl' by Linux package manager"
+      cputw "Please install program 'wmctrl' by package manager"
       cputw "to be able to close desktop windows of process '$exe'."
       return
     }
@@ -2715,6 +2697,8 @@ proc qms_stop {} {
       while {[gets $fd line] != -1} {lappend window_ids [lindex $line 0]}
       catch {close $fd}
     }
+  } elseif {$::tcl_platform(os) == "Darwin"} {
+    set window_ids x
   }
 
   if {![llength $window_ids]} {
@@ -2741,6 +2725,10 @@ proc qms_stop {} {
   } elseif {$::tcl_platform(os) == "Linux"} {
     # Send WM_DELETE_WINDOW event to desktop window(s)
     foreach item $window_ids {catch {exec wmctrl -i -c $item}}
+  } elseif {$::tcl_platform(os) == "Darwin"} {
+    # Send "quit" to application (AppleScript)
+    set script "tell application \"QMapShack\" to quit saving yes"
+    catch {exec osascript -e $script}
   }
 
   # Give process some time (max $count sec) to terminate itself
@@ -2765,10 +2753,12 @@ if {[info exists window.geometry]} {
   # Adjust horizontal position if necessary
   set x [expr max($x,[winfo vrootx .])]
   set x [expr min($x,[winfo vrootx .]+[winfo vrootwidth .]-$width)]
-  wm geometry . +$x+$y
+  catch "wm geometry . +$x+$y"
 }
-incr_font_size 0
+font_size_incr 0
+wm attributes . -topmost 1
 wm deiconify .
+wm attributes . -topmost 0
 
 # Wait for valid selection or finish
 
@@ -2799,7 +2789,7 @@ if {$tcl_platform(os) == "Windows NT"} {
     if {$rc == "no"} exit
     catch {exec TASKKILL /F /PID $pid /T}
   }
-} elseif {$tcl_platform(os) == "Linux"} {
+} elseif {$tcl_platform(os) == "Linux" || $tcl_platform(os) == "Darwin"} {
   set exe [file tail $qms_cmd]
   set rc [catch {exec pgrep -n -u $tcl_platform(user) $exe} result]
   if {$rc == 0} {
@@ -2830,10 +2820,12 @@ file mkdir $tmpdir/tasks
 
 if {${qms.conf} && ${qms.file} != ""} {
   set file ${qms.file}
-} elseif {$tcl_platform(os) == "Windows NT"} {
-  unset -nocomplain file
-} elseif {$tcl_platform(os) == "Linux"} {
-  set file $env(HOME)/.config/QLandkarte/QMapShack.conf
+} else {
+  switch $tcl_platform(os) {
+    "Windows NT" -
+    "Darwin"	 {unset -nocomplain file}
+    "Linux"	 {set file $env(HOME)/.config/QLandkarte/QMapShack.conf}
+  }
 }
 
 set list {cachePath mapPath}
@@ -2842,15 +2834,16 @@ if {[info exists file]} {
   if {![catch {open $file r} fd]} {
     set data [split [read $fd] \n]
     close $fd
-    foreach item $list {
-      set index [lsearch -regexp $data "^$item="]
-      if {$index < 0} continue
-      regexp {^.*?=(.*)$} [lindex $data $index] "" value
-      set $item [string trim [lindex [split $value ,] 0]]
+    foreach item $data {
+      if {![regexp {^(.*?)=(.*)$} $item {} var val]} continue
+      foreach tag $list {
+	if {$var != $tag} continue
+        set $tag [string trim [lindex [split $val ,] 0]]
+      }
     }
     unset data
   }
-} else {
+} elseif {$tcl_platform(os) == "Windows NT"} {
   foreach item $list {
     if {[catch {registry get \
 	{HKEY_CURRENT_USER\SOFTWARE\QLandkarte\QMapShack\Canvas} $item} \
@@ -2860,6 +2853,21 @@ if {[info exists file]} {
       sz	{set $item $value}
       multi_sz	{set $item [lindex $value 0]}
     }
+  }
+} elseif {$tcl_platform(os) == "Darwin"} {
+  if {![catch "exec defaults read org.qlandkarte.QMapShack" result]} {
+    set data [split $result \;]
+    foreach item $data {
+      set item [string trim $item]
+      if {![regexp {"(.*)" = (.*)} $item {} var val]} continue
+      foreach tag $list {
+	if {$var != "Canvas.$tag"} continue
+	regsub {^.*(\()(.*)(\)).*$} $val {{\2}} val
+	eval set val $val
+        set $tag [lindex $val 0]
+      }
+    }
+    unset data
   }
 }
 foreach item $list {
@@ -2931,22 +2939,20 @@ foreach task ${task.use} {
 
 wm withdraw .
 
+# Wait until output console window was closed
+
+if {[winfo ismapped .console]} {
+  console_write "\n[mc m99]\b"
+  wm protocol .console WM_DELETE_WINDOW {}
+  bind .console <ButtonRelease-3> {destroy .console}
+  tkwait window .console
+}
+
 # Save settings to folder ini_folder
 
 save_task_settings ${task.active}
 restore_task_settings ""
 foreach item {global theme shading qmapshack} {save_${item}_settings}
-
-# Wait until output console window was closed
-
-if {[ctsend "winfo ismapped ."]} {
-  ctsend "
-    write \"\n[mc m99]\b\"
-    wm protocol . WM_DELETE_WINDOW {}
-    bind . <ButtonRelease-3> {destroy .}
-    tkwait window .
-  "
-}
 
 # Done
 
