@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 package require Tk
 wm withdraw .
 
-set version "2026-01-11"
+set version "2026-01-13"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -679,7 +679,7 @@ cd $maps_folder
 set maps [find_files "" "*.map"]
 cd $cwd
 set maps [lsort -dictionary $maps]
-if {[llength $maps] == 0} {error_message [mc e11] exit}
+if {[llength $maps] == 0} {error_message [mc e06] exit}
 
 # Get list of available Mapsforge themes
 # and add Mapsforge server's built-in themes
@@ -2214,7 +2214,9 @@ proc selection_ok {} {
 
 proc write_mapsforge {task} {
 
-  if {![file isdirectory $::tms_folder]} return
+  if {![file isdirectory $::tms_folder] || \
+      ![file writable $::tms_folder]} return
+
   set name "Mapsforge [regsub {^(.*)\.(.*)$} $task {\1 \2}]"
   set map $::tms_folder/$name.tms
   cputi "[mc m62 $map] ..."
@@ -2233,11 +2235,14 @@ proc write_mapsforge {task} {
   lappend data </Layer>
   lappend data </TMS>
 
-  set fd [open $map w]
-  puts $fd [join $data \n]
-  close $fd
-  cputi [mc m63 $name]
-  cputi "URL: '[regsub "%1/%2/%3" $url "{z}/{x}/{y}"]'"
+  if {[catch {open $map w} fd]} {
+    error_message [mc e17 $map] return
+  } else {
+    puts $fd [join $data \n]
+    close $fd
+    cputi [mc m63 $name]
+    cputi "URL: '[regsub "%1/%2/%3" $url "{z}/{x}/{y}"]'"
+  }
 
 }
 
@@ -2828,7 +2833,7 @@ if {${qms.conf} && ${qms.file} != ""} {
   }
 }
 
-set list {cachePath mapPath}
+set list {mapPath cachePath}
 lassign {} {*}$list
 if {[info exists file]} {
   if {![catch {open $file r} fd]} {
@@ -2874,10 +2879,13 @@ foreach item $list {
   set value [set $item]
   if {$value != "" && $value != "@Invalid()"} {catch "file mkdir $value"}
 }
-if {![file isdirectory $cachePath] || ![file isdirectory $mapPath]} \
-	{error_message [mc e06] return}
-set tiles_folder $cachePath
+if {![file isdirectory $mapPath] || ![file isdirectory $cachePath]} {
+  error_message [mc e15] return
+} elseif {![file writable $mapPath]} {
+  error_message [mc e16 $mapPath] exit
+}
 set tms_folder $mapPath
+set tiles_folder $cachePath
 unset {*}$list
 
 # Start Mapsforge server
