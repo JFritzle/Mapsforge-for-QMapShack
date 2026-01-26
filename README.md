@@ -25,6 +25,7 @@ Screenshot of graphical user interface:
 **Windows**: If not yet installed, download and install latest QMapShack version from [download section](https://github.com/Maproom/qmapshack/releases).  
 **Linux**: If not yet installed, install QMapShack package using Linux package manager.  
 (Ubuntu: _apt install qmapshack gdal-bin gdal-data proj-bin proj-data routino_)  
+**macOS**: As latest ready to install [QMapShack version 1.17.1](https://github.com/d029940/qmapshack/releases/tag/v1.17.1) is rather old, consider to build your own current version following the [build process for Mac](https://github.com/Maproom/qmapshack/tree/dev/MacOSX) rules.  
 **Note**: Run QMapShack at least once and initialize map & cache folders by _File -> Setup Map Paths_ before using _Mapsforge-for-QMapShack_.  
 
 2.	**Java runtime environment (JRE) or Java development kit (JDK)**  

@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 package require Tk
 wm withdraw .
 
-set version "2026-01-13"
+set version "2026-01-26"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -1683,15 +1683,13 @@ pack .qms.splash -expand 1 -fill x
 
 switch $tcl_platform(os) {
   "Windows NT"	{set qtstyles {Fusion Windows Windows11 WindowsVista ""}}
-  "Linux"	-
-  "Darwin"	{set qtstyles {Fusion Windows ""}}
+  "Linux"	{set qtstyles {Fusion Windows ""}}
+  "Darwin"	{set qtstyles {Fusion macOS Windows ""}}
 }
 labelframe .qms.style -labelanchor w -text [mc y05]:
 pack .qms.style -expand 1 -fill x -pady 1
 combobox .qms.style.values \
-	-validate key -validatecommand {return 0} \
 	-textvariable qms.style -values $qtstyles
-if {[.qms.style.values current] < 0} {.qms.style.values current 0}
 pack .qms.style.values -expand 1 -fill x -padx {5 0}
 
 # Additional command line parameters

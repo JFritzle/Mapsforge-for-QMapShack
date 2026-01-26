@@ -1,3 +1,9 @@
+2026-01-26
+
+- Add QMapShack style "macOS" to selectable styles (macOS only!)
+- Allow setting a style not in list of selectable styles
+  If not in built-in styles, QMapShack uses built-in default style!
+
 2026-01-13
 
 - Fixed script aborting when QMapShack map folder or file not writable
