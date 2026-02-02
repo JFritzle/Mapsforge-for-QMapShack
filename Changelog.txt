@@ -1,3 +1,13 @@
+2026-02-02
+
+- Fixed output console issues with macOS operating system:
+  o horizontal scroll bar may be missing
+  o duplicate title bar due to reserved name ".console"
+- Simplify closing QMapShack gracefully by GUI's "Quit" button
+  (Windows only!)
+- Simplify closing QMapShack gracefully by GUI's "Quit" button
+  for QMapShack version > 1.19.0 (any operating system)
+
 2026-01-26
 
 - Add QMapShack style "macOS" to selectable styles (macOS only!)
