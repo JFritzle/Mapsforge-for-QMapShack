@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 package require Tk
 wm withdraw .
 
-set version "2026-02-02"
+set version "2026-02-17"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -743,7 +743,7 @@ set task.use [lmap task ${task.set} \
 	{if {"$task" ni ${task.use}} continue;set task}]
 
 labelframe .task -labelanchor w -text "[mc l02]: " -bd 0
-entry .task.name -width 32 -textvariable task.name \
+entry .task.name -width 24 -textvariable task.name \
 	-takefocus 1 -highlightthickness 0
 bind .task.name <Return> task_item_add
 button .task.post -image ArrowDown -command task_list_post
@@ -1643,14 +1643,48 @@ entry .qms.cmd.value -textvariable qms_cmd \
 	-state readonly -takefocus 0 -highlightthickness 0
 pack .qms.cmd.value -expand 1 -fill x
 
+# Language (where applicable)
+
+set folder [file dirname $qms_cmd]
+switch $tcl_platform(os) {
+  "Windows NT"	{append folder /translations}
+  "Linux"	{append folder /../share/qmapshack/translations}
+  "Darwin"	{append folder /../Resources/translations}
+}
+
+set list {"" en}
+if {[file isdirectory $folder]} {
+  foreach item [glob -nocomplain -directory $folder \
+	-type f -tail qmapshack_*.qm] \
+	{lappend list [regsub {qmapshack_(.*).qm} $item {\1}]}
+  set list [lsort $list]
+}
+
+if {![info exists qms.language]} {
+  if {${maps.language} in $list} {
+    set qms.language ${maps.language}
+  } else {
+    set qms.language ""
+  }
+}
+
+labelframe .qms.lang -labelanchor w -text [mc y01]:
+combobox .qms.lang.values -width 4 -justify center \
+	-validate key -validatecommand {return 0} \
+	-textvariable qms.language -values $list
+if {$qms_version >= 12000} {
+pack .qms.lang -expand 1 -fill x
+pack .qms.lang.values -side right -anchor e -expand 1 -padx {3 0}
+} else {set qms.language ""}
+
 # Configuration file
 
-checkbutton .qms.conf -text [mc y01]: -variable qms.conf
-tooltip .qms.conf [mc y01t]
+checkbutton .qms.conf -text [mc y02]: -variable qms.conf
+tooltip .qms.conf [mc y02t]
 pack .qms.conf -fill x
 
 frame .qms.file
-entry .qms.file.value -textvariable qms.file -width 40 \
+entry .qms.file.value -textvariable qms.file -width 32 \
 	-state readonly -takefocus 0 -highlightthickness 0
 .qms.file.value xview end
 button .qms.file.button -style Arrow.TButton \
@@ -1660,9 +1694,9 @@ pack .qms.file.value -side left -fill x -expand 1
 pack .qms.file -fill x
 
 proc choose_qms_file {} {
-  lappend ini [mc y02i] {.ini .cfg .conf}
-  lappend all [mc y02a] *
-  set file [tk_getSaveFile -parent . -title "$::title - [mc y02]" \
+  lappend ini [mc y03] {.ini .cfg .conf}
+  lappend all [mc y04] *
+  set file [tk_getSaveFile -parent . -title "$::title - [mc y05]" \
 	-filetypes [list $ini $all] -initialfile ${::qms.file}]
   if {$file != ""} {set ::qms.file $file}
   .qms.file.value xview end
@@ -1670,39 +1704,39 @@ proc choose_qms_file {} {
 
 # Enable/disable debug output
 
-checkbutton .qms.debug -text [mc y03] -variable qms.debug
+checkbutton .qms.debug -text [mc y06] -variable qms.debug
 pack .qms.debug -expand 1 -fill x
 
 # Show splash screen
 
-checkbutton .qms.splash -text [mc y04] -variable qms.splash
+checkbutton .qms.splash -text [mc y07] -variable qms.splash
 pack .qms.splash -expand 1 -fill x
 
 # Window style
 
 switch $tcl_platform(os) {
-  "Windows NT"	{set qtstyles {Fusion Windows Windows11 WindowsVista ""}}
-  "Linux"	{set qtstyles {Fusion Windows ""}}
-  "Darwin"	{set qtstyles {Fusion macOS Windows ""}}
+  "Windows NT"	{set list {Fusion Windows Windows11 WindowsVista ""}}
+  "Linux"	{set list {Fusion Windows ""}}
+  "Darwin"	{set list {Fusion macOS Windows ""}}
 }
-labelframe .qms.style -labelanchor w -text [mc y05]:
+labelframe .qms.style -labelanchor w -text [mc y08]:
 pack .qms.style -expand 1 -fill x -pady 1
 combobox .qms.style.values \
-	-textvariable qms.style -values $qtstyles
+	-textvariable qms.style -values $list
 pack .qms.style.values -expand 1 -fill x -padx {5 0}
 
 # Additional command line parameters
 
-labelframe .qms.args -labelanchor nw -text [mc y06]:
+labelframe .qms.args -labelanchor nw -text [mc y09]:
 pack .qms.args -expand 1 -fill x -pady 1
-entry .qms.args.value -textvariable qms.args -width 40 \
+entry .qms.args.value -textvariable qms.args -width 32 \
 	-takefocus 1 -highlightthickness 0
 pack .qms.args.value -expand 1 -fill x
 
 # Scale window
 
-labelframe .qms.scale -labelanchor w -text [mc y07]:
-tooltip .qms.scale [mc y07t]
+labelframe .qms.scale -labelanchor w -text [mc y10]:
+tooltip .qms.scale [mc y10t]
 scale .qms.scale.scale -from 0.500 -to 2.500 -resolution [expr 1./60.] \
 	-digits 4 -orient horizontal -variable qms.scale
 bind .qms.scale.scale <Shift-ButtonRelease-1> "set qms.scale 1.000"
@@ -1714,7 +1748,7 @@ pack .qms.scale.scale -side right -padx {3 0} -expand 1 -fill x
 
 # High DPI scaling (Qt5 behavior)
 
-checkbutton .qms.highdpi -text [mc y08] -variable qms.highdpi \
+checkbutton .qms.highdpi -text [mc y11] -variable qms.highdpi \
 	-onvalue 0 -offvalue 1
 pack .qms.highdpi -expand 1 -fill x
 
@@ -2119,8 +2153,8 @@ proc save_global_settings {} {
 
 proc save_qmapshack_settings {} {
   save_settings $::ini_folder/qmapshack.ini \
-	qms.conf qms.file qms.debug qms.splash qms.style qms.args \
-	qms.scale qms.highdpi \
+	qms.language qms.conf qms.file qms.debug qms.splash \
+	qms.style qms.args qms.scale qms.highdpi \
 	tcp.interface tcp.port task.use
 }
 
@@ -2301,24 +2335,28 @@ proc process_start {command process} {
   tsend {
     proc cputs {text} "thread::send -async $sid \"console_write {\$text}\""
     proc cputi {text} {cputs "\[---\] $text"}
+
     set mark \[[string toupper $process]\]
     cputi "$m51 $mark"
 
-    fconfigure $fd -blocking 0 -buffering full -buffersize 131072
-    fileevent $fd readable "
+    proc fevent {} {uplevel #0 {
       set text {}
-      while {\[gets $fd line\] >= 0} {lappend text \"\\$mark \$line\"}
-      if {\$text != {}} {cputs \[join \$text \\n\]}
-      if {\[eof $fd\]} {
-	cputi \"$m52 \\$mark\"
-	thread::send -async $sid \"
-	  namespace delete $process
-	  set $process.eof 1
-	  set action 0
-	  \"
-	thread::release
-	close $fd
-      }"
+      while {[gets $fd line] >= 0} {lappend text "$mark $line"}
+      if {$text != {}} {cputs [join $text \n]}
+      if {![eof $fd]} return
+      fileevent $fd readable {}
+      cputi "$m52 $mark"
+      thread::send -async $sid "
+	namespace delete $process
+	set $process.eof 1
+	set action 0
+	"
+      close $fd
+      thread::release
+    }}
+
+    fconfigure $fd -blocking 0 -buffering full -buffersize 131072
+    fileevent $fd readable fevent
   }
 }
 
@@ -2329,15 +2367,15 @@ proc process_kill {process} {
   if {![process_running $process]} return
   namespace upvar $process tid tid pid pid
 
-  thread::send $tid {
-    fileevent $fd readable [regsub {m52} [fileevent $fd readable] {m53}]
-  }
+  thread::send $tid {proc fevent {} [regsub m52 [info body fevent] m53]}
 
-  if {$::tcl_platform(os) == "Windows NT"} {
-    catch {exec TASKKILL /F /PID $pid /T}
-  } elseif {$::tcl_platform(os) == "Linux" || $::tcl_platform(os) == "Darwin"} {
-    if {[catch {exec pgrep -d " " -P $pid} list]} {set list {}}
-    catch {exec kill -SIGKILL $pid {*}$list}
+  switch $::tcl_platform(os) {
+    "Windows NT" {catch {exec TASKKILL /F /PID $pid /T}}
+    "Linux" -
+    "Darwin" {
+      if {[catch {exec pgrep -d " " -P $pid} list]} {set list {}}
+      catch {exec kill -SIGKILL $pid {*}$list}
+    }
   }
 
   if {![info exist ::$process.eof]} {
@@ -2527,7 +2565,10 @@ proc srv_start {} {
 
   set data terminate=true\n
   append data requestlog-format=
-  if {${::log.requests}} {append data "From %{client}a Get %U%q Status %s Size %O bytes Time %{ms}T ms"}
+  if {${::log.requests}} {
+    append data "From %{remote}a:%{local}p Get %U%q "
+    append data "Status %s Size %O bytes Time %{ms}T ms"
+  }
   append data \n
   if {${::tcp.interface} == "localhost"} {append data host=localhost\n}
   set port [set ::tcp.port]
@@ -2603,9 +2644,7 @@ proc srv_stop {} {
   if {![process_running srv]} return
   namespace upvar srv tid tid port port
 
-  thread::send $tid {
-    fileevent $fd readable [regsub "action" [fileevent $fd readable] "{}"]
-  }
+  thread::send $tid {proc fevent {} [regsub action [info body fevent] "{}"]}
 
   set url http://127.0.0.1:$port/terminate
   if {![catch {::http::geturl $url} token]} {
@@ -2624,6 +2663,8 @@ proc qms_start {} {
 
   set debug [lsearch ${::qms.args} debug]
   set args [lreplace ${::qms.args} $debug $debug]
+  set style [string trim ${::qms.style}]
+  set lang [string trim ${::qms.language}]
 
   if {$debug != -1} {
     if {$::tcl_platform(os) == "Windows NT"} {	# Microsoft Store app "WinDbg"
@@ -2637,11 +2678,13 @@ proc qms_start {} {
 
   lappend command $::qms_cmd {*}$args
   if {!${::qms.splash}} {lappend command --no-splash}
-  if {${::qms.style} != ""} {lappend command --style ${::qms.style}}
+  if {$style != ""} {lappend command --style $style}
+  if {$lang != ""} {lappend command -l $lang}
   if {${::qms.conf} && ${::qms.file} != ""} {lappend command -c ${::qms.file}}
   if {${::qms.debug}} {lappend command -d}
   set ::env(QT_SCALE_FACTOR) ${::qms.scale}
   set ::env(QT_ENABLE_HIGHDPI_SCALING) ${::qms.highdpi}
+# set ::env(QTWEBENGINE_CHROMIUM_FLAGS) "--single-process"
 
   set name "QMapShack \[QMS\]"
   cputi "[mc m54 $name] ..."
@@ -2816,7 +2859,7 @@ if {[info exists file]} {
       if {![regexp {^(.*?)=(.*)$} $item {} var val]} continue
       foreach tag $list {
 	if {$var != $tag} continue
-        set $tag [string trim [lindex [split $val ,] 0]]
+	set $tag [string trim [lindex [split $val ,] 0]]
       }
     }
     unset data
@@ -2842,7 +2885,7 @@ if {[info exists file]} {
 	if {$var != "Canvas.$tag"} continue
 	regsub {^.*(\()(.*)(\)).*$} $val {{\2}} val
 	eval set val $val
-        set $tag [lindex $val 0]
+	set $tag [lindex $val 0]
       }
     }
     unset data

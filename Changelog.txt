@@ -1,3 +1,11 @@
+2026-02-17
+
+- Extended QMS config menu to allow setting QMS application
+  language different from operating system language
+  for QMapShack version >= 1.20.0
+- Changed server's request log format
+- Minor script optimizations with thread and process handling
+
 2026-02-02
 
 - Fixed output console issues with macOS operating system:
