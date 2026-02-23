@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 package require Tk
 wm withdraw .
 
-set version "2026-02-17"
+set version "2026-02-23"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -2884,6 +2884,7 @@ if {[info exists file]} {
       foreach tag $list {
 	if {$var != "Canvas.$tag"} continue
 	regsub {^.*(\()(.*)(\)).*$} $val {{\2}} val
+	regsub -all {,\n} $val { } val
 	eval set val $val
 	set $tag [lindex $val 0]
       }
