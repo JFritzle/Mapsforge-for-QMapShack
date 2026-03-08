@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 package require Tk
 wm withdraw .
 
-set version "2026-03-03"
+set version "2026-03-08"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -426,7 +426,7 @@ set max_zoom_level [expr min(20,$max_zoom_level)]
 set qms.conf 0
 set qms.file ""
 set qms.args ""
-set qms.default {splash 0 style Fusion scale 1.000 debug 0 highdpi 1}
+set qms.default {splash 0 style Fusion fontsize "" fontfamily "" scale 1.000 debug 0 highdpi 1}
 lmap {i v} ${qms.default} {set qms.$i $v}
 
 # Save/restore settings
@@ -694,7 +694,7 @@ if {$server_version < 220000} \
 
 set qms_version 0
 set qms_string unknown
-set command [list $qms_cmd -v]
+set command [list $qms_cmd --version]
 set rc [catch "exec $command 2>@1" result]
 if {!$rc} {
   set line [lindex [split $result \n] 0]
@@ -1145,7 +1145,7 @@ focus .buttons.continue
 proc busy_state {state} {
   set busy {.f .buttons.continue .overlays .shading .effects .server}
   if {$state} {
-    foreach item $busy {tk_busy hold $item -cursor wait}
+    foreach item $busy {tk_busy hold $item}
     .buttons.continue state pressed
   } else {
     .buttons.continue state !pressed
@@ -1686,7 +1686,42 @@ entry .qms.cmd.value -textvariable qms_cmd \
 	-state readonly -takefocus 0 -highlightthickness 0
 pack .qms.cmd.value -expand 1 -fill x
 
-# Language (where applicable)
+# Configuration file
+
+checkbutton .qms.conf -text [mc y01]: -variable qms.conf
+tooltip .qms.conf [mc y01t]
+pack .qms.conf -fill x
+
+frame .qms.file
+entry .qms.file.value -textvariable qms.file -width 32 \
+	-state readonly -takefocus 0 -highlightthickness 0
+.qms.file.value xview end
+button .qms.file.button -style Arrow.TButton \
+	-image ArrowDown -command choose_qms_file
+pack .qms.file.button -side right -fill y
+pack .qms.file.value -side left -fill x -expand 1
+pack .qms.file -fill x
+
+proc choose_qms_file {} {
+  lappend ini [mc y02] {.ini .cfg .conf}
+  lappend all [mc y03] *
+  set file [tk_getSaveFile -parent . -title "$::title - [mc y04]" \
+	-filetypes [list $ini $all] -initialfile ${::qms.file}]
+  if {$file != ""} {set ::qms.file $file}
+  .qms.file.value xview end
+}
+
+# Show splash screen
+
+checkbutton .qms.splash -text [mc y05] -variable qms.splash
+pack .qms.splash -expand 1 -fill x
+
+# Enable/disable debug output
+
+checkbutton .qms.debug -text [mc y06] -variable qms.debug
+pack .qms.debug -expand 1 -fill x
+
+# Application language (where applicable)
 
 set folder [file dirname $qms_cmd]
 switch $tcl_platform(os) {
@@ -1711,49 +1746,36 @@ if {![info exists qms.language]} {
   }
 }
 
-labelframe .qms.lang -labelanchor w -text [mc y01]:
+labelframe .qms.lang -labelanchor w -text [mc y07]:
 combobox .qms.lang.values -width 4 -justify center \
 	-validate key -validatecommand {return 0} \
 	-textvariable qms.language -values $list
 if {$qms_version >= 12000} {
-pack .qms.lang -expand 1 -fill x
+pack .qms.lang -expand 1 -fill x -pady 1
 pack .qms.lang.values -side right -anchor e -expand 1 -padx {3 0}
 } else {set qms.language ""}
 
-# Configuration file
+# Application font properties
 
-checkbutton .qms.conf -text [mc y02]: -variable qms.conf
-tooltip .qms.conf [mc y02t]
-pack .qms.conf -fill x
-
-frame .qms.file
-entry .qms.file.value -textvariable qms.file -width 32 \
-	-state readonly -takefocus 0 -highlightthickness 0
-.qms.file.value xview end
-button .qms.file.button -style Arrow.TButton \
-	-image ArrowDown -command choose_qms_file
-pack .qms.file.button -side right -fill y
-pack .qms.file.value -side left -fill x -expand 1
-pack .qms.file -fill x
-
-proc choose_qms_file {} {
-  lappend ini [mc y03] {.ini .cfg .conf}
-  lappend all [mc y04] *
-  set file [tk_getSaveFile -parent . -title "$::title - [mc y05]" \
-	-filetypes [list $ini $all] -initialfile ${::qms.file}]
-  if {$file != ""} {set ::qms.file $file}
-  .qms.file.value xview end
+labelframe .qms.fontsize -labelanchor w -text [mc y08]:
+entry .qms.fontsize.value -textvariable qms.fontsize \
+	-validate key -validatecommand {regexp {^\s*[0-9]*\.?[0-9]*\s*$} %P} \
+	-width 6 -justify right
+labelframe .qms.fontfamily -labelanchor w -text [mc y09]:
+set list [font families]
+lappend list ""
+combobox .qms.fontfamily.values -width 24 \
+	-validate key -validatecommand {return 0} \
+	-textvariable qms.fontfamily -values [lsort $list]
+if {$qms_version > 12001} {
+pack .qms.fontsize -expand 1 -fill x -pady 1
+pack .qms.fontsize.value -side right -anchor e -expand 1 -padx {3 0}
+pack .qms.fontfamily -expand 1 -fill x -pady 1
+pack .qms.fontfamily.values -side right -anchor e -expand 1 -padx {3 0}
+} else {
+set qms.fontsize ""
+set qms.fontfamily ""
 }
-
-# Enable/disable debug output
-
-checkbutton .qms.debug -text [mc y06] -variable qms.debug
-pack .qms.debug -expand 1 -fill x
-
-# Show splash screen
-
-checkbutton .qms.splash -text [mc y07] -variable qms.splash
-pack .qms.splash -expand 1 -fill x
 
 # Window style
 
@@ -1762,15 +1784,15 @@ switch $tcl_platform(os) {
   "Linux"	{set list {Fusion Windows ""}}
   "Darwin"	{set list {Fusion macOS Windows ""}}
 }
-labelframe .qms.style -labelanchor w -text [mc y08]:
+labelframe .qms.style -labelanchor w -text [mc y10]:
 pack .qms.style -expand 1 -fill x -pady 1
-combobox .qms.style.values \
+combobox .qms.style.values -width 24 \
 	-textvariable qms.style -values $list
-pack .qms.style.values -expand 1 -fill x -padx {5 0}
+pack .qms.style.values -anchor e -expand 1 -padx {5 0}
 
 # Additional command line parameters
 
-labelframe .qms.args -labelanchor nw -text [mc y09]:
+labelframe .qms.args -labelanchor nw -text [mc y15]:
 pack .qms.args -expand 1 -fill x -pady 1
 entry .qms.args.value -textvariable qms.args -width 32 \
 	-takefocus 1 -highlightthickness 0
@@ -1778,8 +1800,8 @@ pack .qms.args.value -expand 1 -fill x
 
 # Scale window
 
-labelframe .qms.scale -labelanchor w -text [mc y10]:
-tooltip .qms.scale [mc y10t]
+labelframe .qms.scale -labelanchor w -text [mc y16]:
+tooltip .qms.scale [mc y16t]
 scale .qms.scale.scale -from 0.500 -to 2.500 -resolution [expr 1./60.] \
 	-digits 4 -orient horizontal -variable qms.scale
 bind .qms.scale.scale <Shift-ButtonRelease-1> "set qms.scale 1.000"
@@ -1791,7 +1813,7 @@ pack .qms.scale.scale -side right -padx {3 0} -expand 1 -fill x
 
 # High DPI scaling (Qt5 behavior)
 
-checkbutton .qms.highdpi -text [mc y11] -variable qms.highdpi \
+checkbutton .qms.highdpi -text [mc y17] -variable qms.highdpi \
 	-onvalue 0 -offvalue 1
 pack .qms.highdpi -expand 1 -fill x
 
@@ -2196,7 +2218,8 @@ proc save_global_settings {} {
 
 proc save_qmapshack_settings {} {
   save_settings $::ini_folder/qmapshack.ini \
-	qms.language qms.conf qms.file qms.debug qms.splash \
+	qms.conf qms.file qms.splash qms.debug \
+	qms.language qms.fontsize qms.fontfamily \
 	qms.style qms.args qms.scale qms.highdpi \
 	tcp.interface tcp.port task.use
 }
@@ -2706,8 +2729,8 @@ proc qms_start {} {
 
   set debug [lsearch ${::qms.args} debug]
   set args [lreplace ${::qms.args} $debug $debug]
-  set style [string trim ${::qms.style}]
-  set lang [string trim ${::qms.language}]
+  foreach item {style language fontsize fontfamily} \
+	{set $item [string trim [set ::qms.$item]]}
 
   if {$debug != -1} {
     if {$::tcl_platform(os) == "Windows NT"} {	# Microsoft Store app "WinDbg"
@@ -2721,10 +2744,12 @@ proc qms_start {} {
 
   lappend command $::qms_cmd {*}$args
   if {!${::qms.splash}} {lappend command --no-splash}
+  if {${::qms.debug}} {lappend command --debug}
+  if {${::qms.conf} && ${::qms.file} != ""} {lappend command --config ${::qms.file}}
+  if {$language != ""} {lappend command --locale $language}
+  if {$fontsize != ""} {lappend command --font-size $fontsize}
+  if {$fontfamily != ""} {lappend command --font-family $fontfamily}
   if {$style != ""} {lappend command --style $style}
-  if {$lang != ""} {lappend command -l $lang}
-  if {${::qms.conf} && ${::qms.file} != ""} {lappend command -c ${::qms.file}}
-  if {${::qms.debug}} {lappend command -d}
   set ::env(QT_SCALE_FACTOR) ${::qms.scale}
   set ::env(QT_ENABLE_HIGHDPI_SCALING) ${::qms.highdpi}
 # set ::env(QTWEBENGINE_CHROMIUM_FLAGS) "--single-process"
