@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 package require Tk
 wm withdraw .
 
-set version "2026-03-08"
+set version "2026-04-22"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -109,11 +109,15 @@ Dialog.msg.wrapLength ${dialog.wrapLength}
 Dialog.dtl.wrapLength ${dialog.wrapLength}
 Dialog.msg.font TkDefaultFont
 Dialog.dtl.font TkDefaultFont
+Entry.borderWidth 1
 Entry.highlightThickness 1
 Label.borderWidth 1
 Label.padX 0
 Label.padY 0
 Labelframe.borderWidth 0
+Listbox.exportSelection 0
+Listbox.relief sunken
+Listbox.takeFocus 1
 Scale.highlightThickness 1
 Scale.showValue 0
 Scale.takeFocus 1
@@ -853,7 +857,7 @@ proc task_list_post {} {
   scrollbar $sb -command "$lb yview"
   set len [llength ${::task.set}]
   listbox $lb -selectmode multiple -activestyle underline -bd 0 \
-	-takefocus 1 -exportselection 0 -height [expr min($len,5)]
+	-height [expr min($len,5)]
   if {$len > 5} {
     pack $sb -side right -fill y
     $lb configure -yscrollcommand "$sb set"
@@ -1048,7 +1052,6 @@ labelframe .maps -labelanchor nw -text [mc l14]:
 pack .maps -in .f -expand 1 -fill x -pady 1
 scrollbar .maps.scroll -command ".maps.values yview"
 listbox .maps.values -selectmode extended -activestyle none \
-	-takefocus 1 -exportselection 0 -relief sunken \
 	-width 0 -height [expr min([llength $maps],8)] \
 	-yscrollcommand ".maps.scroll set"
 pack .maps.scroll -side right -fill y
