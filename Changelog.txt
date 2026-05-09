@@ -1,3 +1,10 @@
+2026-05-09
+
+- Added hyperlinks to QMapShack's & Mapsforge Server's home page
+- Added QMapShack debugging checkbox to QMapShack config menu:
+  to be unlocked in INI file
+- Minor script optimizations
+
 2026-05-04
 
 - Fixed log4j server issue with non-ASCII characters in user name

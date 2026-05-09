@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 package require Tk
 wm withdraw .
 
-set version "2026-05-04"
+set version "2026-05-09"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -319,7 +319,7 @@ if {![file exist $file]} {
 # replace relative paths by absolute paths
 
 # - commands
-set cmds {java_cmd qms_cmd}
+set cmds {java_cmd qms_cmd debug_cmd}
 # - commands + folders + files
 set list [concat $cmds ini_folder maps_folder themes_folder server_jar]
 
@@ -430,7 +430,8 @@ set max_zoom_level [expr min(20,$max_zoom_level)]
 set qms.conf 0
 set qms.file ""
 set qms.args ""
-set qms.default {splash 0 style Fusion fontsize "" fontfamily "" scale 1.000 debug 0 highdpi 1}
+set qms.default {splash 0 style Fusion fontsize "" fontfamily "" \
+	scale 1.000 highdpi 1 debug 0 debugger 0}
 lmap {i v} ${qms.default} {set qms.$i $v}
 
 # Save/restore settings
@@ -747,23 +748,27 @@ zipfile::decode::close
 set themes [lsort -dictionary $themes]
 set themes [linsert $themes 0 (DEFAULT)]
 
+# Hyperlink to home page
+
+font create hyperfont {*}[font configure TkDefaultFont] -underline 1
+proc hyperlink {widget url} {
+  $widget configure -font hyperfont -fg blue
+  tooltip $widget $url
+  switch $::tcl_platform(os) {
+    "Windows NT" {set exec "exec cmd.exe /C START {} $url"}
+    "Linux"	 {set exec "exec nohup xdg-open $url >/dev/null"}
+    "Darwin"	 {set exec "exec nohup open $url >/dev/null"}
+  }
+  bind $widget <Button-1> "catch {$exec}"
+}
+
 # --- Begin of main window
 
 # Title
 
-font create title_font {*}[font configure TkDefaultFont] \
-	-underline 1 -weight bold
-label .title -text $title -font title_font -fg blue
-pack .title -fill x
-
-set github https://github.com/JFritzle/Mapsforge-for-QMapShack
-tooltip .title $github
-switch $tcl_platform(os) {
-  "Windows NT"	{set exec "exec cmd.exe /C START {} $github"}
-  "Linux"	{set exec "exec nohup xdg-open $github >/dev/null"}
-  "Darwin"	{set exec "exec nohup open $github >/dev/null"}
-}
-bind .title <Button-1> "catch {$exec}"
+label .title -text $title
+pack .title
+hyperlink .title https://github.com/JFritzle/Mapsforge-for-QMapShack
 
 # Menu column
 
@@ -1042,13 +1047,13 @@ foreach item {.lang .lang.value} {tooltip $item [mc l11t]}
 
 # Mapsforge map selection
 
-labelframe .maps_folder -labelanchor nw -text [mc l13]:
+labelframe .maps_folder -text [mc l13]:
 pack .maps_folder -in .f -fill x -pady 1
 entry .maps_folder.value -textvariable maps_folder \
 	-state readonly -takefocus 0 -highlightthickness 0
 pack .maps_folder.value -fill x
 
-labelframe .maps -labelanchor nw -text [mc l14]:
+labelframe .maps -text [mc l14]:
 pack .maps -in .f -fill x -pady 1
 scrollbar .maps.scroll -command ".maps.values yview"
 listbox .maps.values -selectmode extended -activestyle none \
@@ -1077,7 +1082,7 @@ pack .maps_world -in .f -fill x
 
 # Mapsforge theme selection
 
-labelframe .themes_folder -labelanchor nw -text [mc l16]:
+labelframe .themes_folder -text [mc l16]:
 pack .themes_folder -in .f -fill x -pady 1
 entry .themes_folder.value -textvariable themes_folder \
 	-state readonly -takefocus 0 -highlightthickness 0
@@ -1335,7 +1340,7 @@ entry .shading.simple.value2 -textvariable shading.simple.scale \
 set .shading.simple.value2.minmax {0 10 0.666}
 tooltip .shading.simple.value2 "0 ≤ [mc l85] ≤ 10"
 pack .shading.simple.value1 .shading.simple.label2 .shading.simple.value2 \
-	-side left -anchor w -expand 1 -fill x -padx {3 0}
+	-side left -expand 1 -fill x -padx {3 0}
 
 labelframe .shading.diffuselight -labelanchor w -text [mc l86]:
 entry .shading.diffuselight.value -textvariable shading.diffuselight.angle \
@@ -1346,11 +1351,11 @@ pack .shading.diffuselight.value -side right -padx {3 0}
 
 frame .shading.asy
 foreach i {0 1 2} {
-  label .shading.asy.label$i -anchor w -text [mc l88$i]:
+  label .shading.asy.label$i -text [mc l88$i]:
   entry .shading.asy.value$i -textvariable shading.asy.array($i) \
 	-width 8 -justify right
   grid .shading.asy.label$i -row $i -column 1 -sticky w -padx {0 2}
-  grid .shading.asy.value$i -row $i -column 2 -sticky e
+  grid .shading.asy.value$i -row $i -column 2
 }
 set .shading.asy.value0.minmax {0 1 0.5}
 tooltip .shading.asy.value0 "0 ≤ [mc l880] ≤ 1"
@@ -1475,28 +1480,28 @@ update_shading_window
 
 label .effects.scaling -text [mc s01]
 
-label .effects.user_label -text [mc s02]: -anchor w
+label .effects.user_label -text [mc s02]:
 scale .effects.user_scale -from 0.05 -to 2.50 -resolution 0.05 \
 	-orient horizontal -variable user.scale
 bind .effects.user_scale <Shift-ButtonRelease-1> "set user.scale 1.00"
 label .effects.user_value -textvariable user.scale -width 4 \
 	-relief sunken
 
-label .effects.text_label -text [mc s03]: -anchor w
+label .effects.text_label -text [mc s03]:
 scale .effects.text_scale -from 0.05 -to 2.50 -resolution 0.05 \
 	-orient horizontal -variable text.scale
 bind .effects.text_scale <Shift-ButtonRelease-1> "set text.scale 1.00"
 label .effects.text_value -textvariable text.scale -width 4 \
 	-relief sunken
 
-label .effects.symbol_label -text [mc s04]: -anchor w
+label .effects.symbol_label -text [mc s04]:
 scale .effects.symbol_scale -from 0.05 -to 2.50 -resolution 0.05 \
 	-orient horizontal -variable symbol.scale
 bind .effects.symbol_scale <Shift-ButtonRelease-1> "set symbol.scale 1.00"
 label .effects.symbol_value -textvariable symbol.scale -width 4 \
 	-relief sunken
 
-label .effects.line_label -text [mc s05]: -anchor w
+label .effects.line_label -text [mc s05]:
 scale .effects.line_scale -from 0.05 -to 2.50 -resolution 0.05 \
 	-orient horizontal -variable line.scale
 bind .effects.line_scale <Shift-ButtonRelease-1> "set line.scale 1.00"
@@ -1504,27 +1509,26 @@ label .effects.line_value -textvariable line.scale -width 4 \
 	-relief sunken
 
 set row 0
-grid .effects.scaling -row $row -column 1 -columnspan 3 -sticky we
+grid .effects.scaling -row $row -column 1 -columnspan 3
 foreach item {user text symbol line} {
   incr row
-  grid .effects.${item}_label -row $row -column 1 -sticky w \
-	-padx {0 2} -pady {0 4}
-  grid .effects.${item}_scale -row $row -column 2 -sticky we
-  grid .effects.${item}_value -row $row -column 3 -sticky e
+  grid .effects.${item}_label -row $row -column 1 -sticky w -padx {0 2}
+  grid .effects.${item}_scale -row $row -column 2
+  grid .effects.${item}_value -row $row -column 3
 }
 
 # Gamma correction & Contrast-stretching
 
 label .effects.color -text [mc s06]
 
-label .effects.gamma_label -text [mc s07]: -anchor w
+label .effects.gamma_label -text [mc s07]:
 scale .effects.gamma_scale -from 0.01 -to 4.99 -resolution 0.01 \
 	-orient horizontal -variable maps.gamma
 bind .effects.gamma_scale <Shift-ButtonRelease-1> "set maps.gamma 1.00"
 label .effects.gamma_value -textvariable maps.gamma -width 4 \
 	-relief sunken
 
-label .effects.contrast_label -text [mc s08]: -anchor w
+label .effects.contrast_label -text [mc s08]:
 scale .effects.contrast_scale -from 0 -to 254 -resolution 1 \
 	-orient horizontal -variable maps.contrast
 bind .effects.contrast_scale <Shift-ButtonRelease-1> "set maps.contrast 0"
@@ -1532,13 +1536,12 @@ label .effects.contrast_value -textvariable maps.contrast -width 4 \
 	-relief sunken
 
 set row 10
-grid .effects.color -row $row -column 1 -columnspan 3 -sticky we
+grid .effects.color -row $row -column 1 -columnspan 3
 foreach item {gamma contrast} {
   incr row
-  grid .effects.${item}_label -row $row -column 1 -sticky w \
-	-padx {0 2} -pady {0 4}
-  grid .effects.${item}_scale -row $row -column 2 -sticky we
-  grid .effects.${item}_value -row $row -column 3 -sticky e
+  grid .effects.${item}_label -row $row -column 1 -sticky w -padx {0 2}
+  grid .effects.${item}_scale -row $row -column 2
+  grid .effects.${item}_value -row $row -column 3
 }
 
 grid columnconfigure .effects {1 2} -uniform 1
@@ -1558,37 +1561,33 @@ proc reset_effects_values {} {
 # --- End of visual rendering effects
 # --- Begin of server settings
 
-# Server information
+# Server title
 
-label .server.info -text [mc x01]
-pack .server.info
+label .server.title -text "Mapsforge Server"
+pack .server.title
+hyperlink .server.title https://github.com/telemaxx/mapsforgesrv
 
-# Java runtime version
+# Mapsforge server jar archive
 
-labelframe .server.jre_version -labelanchor w -text [mc x02]:
-pack .server.jre_version -fill x -pady 1
-label .server.jre_version.value -textvariable java_string
-pack .server.jre_version.value -side right
-
-# Mapsforge server version
-
-labelframe .server.version -labelanchor w -text [mc x03]:
-pack .server.version -fill x -pady 1
-label .server.version.value -textvariable server_string
-pack .server.version.value -side right
-
-# Mapsforge server version jar archive
-
-labelframe .server.jar -labelanchor nw -text [mc x04]:
+labelframe .server.jar -text [mc x01]:
 pack .server.jar -fill x -pady 1
 entry .server.jar.value -textvariable server_jar \
 	-state readonly -takefocus 0 -highlightthickness 0
 pack .server.jar.value -fill x
 
-# Server configuration
+# Mapsforge server version
 
-label .server.config -text [mc x11]
-pack .server.config -pady {5 0}
+labelframe .server.version -labelanchor w -text [mc x02]:
+pack .server.version -fill x -pady 1
+label .server.version.value -text $server_string
+pack .server.version.value -side right
+
+# Java runtime version
+
+labelframe .server.jre_version -labelanchor w -text [mc x03]:
+pack .server.jre_version -fill x -pady 1
+label .server.jre_version.value -text $java_string
+pack .server.jre_version.value -side right
 
 # Rendering engine
 
@@ -1608,7 +1607,7 @@ foreach item $engines \
 	{set width [expr max([font measure TkTextFont $item],$width)]}
 set width [expr $width/[font measure TkTextFont "0"]+1]
 
-labelframe .server.engine -labelanchor nw -text [mc x12]:
+labelframe .server.engine -text [mc x04]:
 combobox .server.engine.values -width $width \
 	-validate key -validatecommand {return 0} \
 	-textvariable rendering.engine -values $engines
@@ -1621,7 +1620,7 @@ if {[llength $engines] > 1} {
 
 # Server interface
 
-labelframe .server.interface -labelanchor w -text [mc x13]:
+labelframe .server.interface -labelanchor w -text [mc x05]:
 combobox .server.interface.values -width 10 \
 	-textvariable tcp.interface -values {localhost all}
 if {[.server.interface.values current] < 0} \
@@ -1631,27 +1630,27 @@ pack .server.interface.values -side right -padx {3 0}
 
 # Server TCP port number
 
-labelframe .server.port -labelanchor w -text [mc x15]:
+labelframe .server.port -labelanchor w -text [mc x06]:
 entry .server.port.value -textvariable tcp.port \
 	-width 6 -justify center
 set .server.port.value.minmax "1024 65535 $tcp_port"
-tooltip .server.port.value "1024 ≤ [mc x15] ≤ 65535"
+tooltip .server.port.value "1024 ≤ [mc x06] ≤ 65535"
 pack .server.port -fill x -pady 1
 pack .server.port.value -side right -padx {3 0}
 
 # Maximum size of TCP listening queue
 
-labelframe .server.maxconn -labelanchor w -text [mc x16]:
+labelframe .server.maxconn -labelanchor w -text [mc x07]:
 entry .server.maxconn.value -textvariable tcp.maxconn \
 	-width 6 -justify center
 set .server.maxconn.value.minmax {0 {} 1024}
-tooltip .server.maxconn.value "[mc x16] ≥ 0"
+tooltip .server.maxconn.value "[mc x07] ≥ 0"
 pack .server.maxconn -fill x -pady 1
 pack .server.maxconn.value -side right -padx {3 0}
 
 # Enable/disable server request logging
 
-checkbutton .server.logrequests -text [mc x19] -variable log.requests
+checkbutton .server.logrequests -text [mc x08] -variable log.requests
 pack .server.logrequests -fill x
 
 # Reset server configuration
@@ -1676,23 +1675,33 @@ foreach widget {.server.port.value .server.maxconn.value} {
 # --- End of server settings
 # --- Begin of QMapShack settings
 
-set text QMapShack
-if {$::qms_version} {append text " $::qms_string"}
-label .qms.version -text $text
-pack .qms.version
+# Application title
+
+label .qms.title -text QMapShack
+pack .qms.title
+hyperlink .qms.title https://github.com/Maproom/qmapshack
 
 # Application path
 
-labelframe .qms.cmd -labelanchor nw -text [mc y00]:
+labelframe .qms.cmd -text [mc y01]:
 pack .qms.cmd -fill x -pady 1
 entry .qms.cmd.value -textvariable qms_cmd \
 	-state readonly -takefocus 0 -highlightthickness 0
 pack .qms.cmd.value -fill x
 
+# Application version
+
+if {$qms_version} {
+labelframe .qms.version -labelanchor w -text [mc y02]:
+pack .qms.version -fill x -pady 1
+label .qms.version.value -text $qms_string
+pack .qms.version.value -side right
+}
+
 # Configuration file
 
-checkbutton .qms.conf -text [mc y01]: -variable qms.conf
-tooltip .qms.conf [mc y01t]
+checkbutton .qms.conf -text [mc y03]: -variable qms.conf
+tooltip .qms.conf [mc y03t]
 pack .qms.conf -fill x
 
 frame .qms.file
@@ -1706,9 +1715,9 @@ pack .qms.file.value -side left -fill x -expand 1
 pack .qms.file -fill x
 
 proc choose_qms_file {} {
-  lappend ini [mc y02] {.ini .cfg .conf}
-  lappend all [mc y03] *
-  set file [tk_getSaveFile -parent . -title "$::title - [mc y04]" \
+  lappend ini [mc y04] {.ini .cfg .conf}
+  lappend all [mc y05] *
+  set file [tk_getSaveFile -parent . -title "$::title - [mc y06]" \
 	-filetypes [list $ini $all] -initialfile ${::qms.file}]
   if {$file != ""} {set ::qms.file $file}
   .qms.file.value xview end
@@ -1716,12 +1725,12 @@ proc choose_qms_file {} {
 
 # Show splash screen
 
-checkbutton .qms.splash -text [mc y05] -variable qms.splash
+checkbutton .qms.splash -text [mc y07] -variable qms.splash
 pack .qms.splash -fill x
 
 # Enable/disable debug output
 
-checkbutton .qms.debug -text [mc y06] -variable qms.debug
+checkbutton .qms.debug -text [mc y08] -variable qms.debug
 pack .qms.debug -fill x
 
 # Application language (where applicable)
@@ -1749,7 +1758,7 @@ if {![info exists qms.language]} {
   }
 }
 
-labelframe .qms.lang -labelanchor w -text [mc y07]:
+labelframe .qms.lang -labelanchor w -text [mc y09]:
 combobox .qms.lang.values -width 4 -justify center \
 	-validate key -validatecommand {return 0} \
 	-textvariable qms.language -values $list
@@ -1760,12 +1769,12 @@ pack .qms.lang.values -side right -padx {3 0}
 
 # Application font properties
 
-labelframe .qms.fontsize -labelanchor w -text [mc y08]:
+labelframe .qms.fontsize -labelanchor w -text [mc y10]:
 entry .qms.fontsize.value -textvariable qms.fontsize \
 	-validate key -validatecommand {regexp {^\s*[0-9]*\.?[0-9]*\s*$} %P} \
 	-width 6 -justify right
 tooltip .qms.fontsize.value "Points (pt)"
-labelframe .qms.fontfamily -labelanchor w -text [mc y09]:
+labelframe .qms.fontfamily -labelanchor w -text [mc y11]:
 set list [font families]
 lappend list ""
 combobox .qms.fontfamily.values -width 24 \
@@ -1788,7 +1797,7 @@ switch $tcl_platform(os) {
   "Linux"	{set list {Fusion Windows ""}}
   "Darwin"	{set list {Fusion macOS Windows ""}}
 }
-labelframe .qms.style -labelanchor w -text [mc y10]:
+labelframe .qms.style -labelanchor w -text [mc y12]:
 pack .qms.style -fill x -pady 1
 combobox .qms.style.values -width 24 \
 	-textvariable qms.style -values $list
@@ -1796,7 +1805,7 @@ pack .qms.style.values -side right -padx {3 0}
 
 # Additional command line parameters
 
-labelframe .qms.args -labelanchor nw -text [mc y15]:
+labelframe .qms.args -text [mc y15]:
 pack .qms.args -fill x -pady 1
 entry .qms.args.value -textvariable qms.args -width 32 \
 	-takefocus 1 -highlightthickness 0
@@ -1820,6 +1829,13 @@ pack .qms.scale.scale -side right -padx {3 0} -expand 1 -fill x
 checkbutton .qms.highdpi -text [mc y17] -variable qms.highdpi \
 	-onvalue 0 -offvalue 1
 pack .qms.highdpi -fill x
+
+# Enable/disable debugger
+
+if {[info exists debug_cmd]} {
+  checkbutton .qms.debugger -text [mc y20] -variable qms.debugger
+  pack .qms.debugger -fill x
+}
 
 # Reset settings
 
@@ -2086,7 +2102,7 @@ proc update_overlays_selection {} {
   frame $parent.separator2 -bd 2 -height 2 -relief sunken
   pack $parent.separator2 -fill x -pady 2
   frame $parent.buttons
-  pack $parent.buttons -anchor n
+  pack $parent.buttons
   button $parent.buttons.all -text [mc b91] -width 8 \
 	-command "select_style_overlays $style_id all"
   tooltip $parent.buttons.all [mc b91t]
@@ -2222,9 +2238,10 @@ proc save_global_settings {} {
 
 proc save_qmapshack_settings {} {
   save_settings $::ini_folder/qmapshack.ini \
-	qms.conf qms.file qms.splash qms.debug \
+	qms.conf qms.file qms.splash qms.style \
 	qms.language qms.fontsize qms.fontfamily \
-	qms.style qms.args qms.scale qms.highdpi \
+	qms.args qms.scale qms.highdpi \
+	qms.debug qms.debugger \
 	tcp.interface tcp.port task.use
 }
 
@@ -2265,8 +2282,9 @@ proc font_size_incr {incr} {
   if {$size < 0} {set size [expr round(-$size/[tk scaling])]}
   incr size $incr
   if {$size < 5 || $size > 20} return
-  set fonts {TkDefaultFont TkTextFont TkFixedFont TkTooltipFont title_font}
+  set fonts {TkDefaultFont TkTextFont TkFixedFont TkTooltipFont}
   foreach item $fonts {font configure $item -size $size}
+  font configure hyperfont -size [expr 1+$size]
   set ::font.size $size
   set height [expr [winfo reqheight .title]-2]
 
@@ -2732,45 +2750,52 @@ proc srv_stop {} {
 
 proc qms_start {} {
 
-  set debug [lsearch ${::qms.args} debug]
-  set args [lreplace ${::qms.args} $debug $debug]
-  foreach item {style language fontsize fontfamily} \
-	{set $item [string trim [set ::qms.$item]]}
-
-  if {$debug != -1} {
-    if {$::tcl_platform(os) == "Windows NT"} {	# Microsoft Store app "WinDbg"
-      set debugger "$::env(LOCALAPPDATA)/Microsoft/WindowsApps/WinDbgX.exe"
-      lappend command cmd.exe /C [file normalize $debugger]
+  set debugger [expr {[info exists ::debug_cmd] && ${::qms.debugger} ? 1 : 0}]
+  if {$debugger} {
+    if {$::tcl_platform(os) == "Windows NT"} {
+      lappend command cmd.exe /C [file normalize $::debug_cmd]
       set ::env(QT_WIN_DEBUG_CONSOLE) new
-    } elseif {$::tcl_platform(os) == "Linux"} {	# Terminal with "gdb"
-      lappend command x-terminal-emulator -e gdb --quiet --args
+    } elseif {$::tcl_platform(os) == "Linux"} {
+      lappend command x-terminal-emulator -e $::debug_cmd {*}$::debug_args
     }
   }
 
-  lappend command $::qms_cmd {*}$args
-  if {!${::qms.splash}} {lappend command --no-splash}
-  if {${::qms.debug}} {lappend command --debug}
+  foreach item {splash debug language fontsize fontfamily style scale highdpi} \
+	{set $item [string trim [set ::qms.$item]]}
+
+  lappend command $::qms_cmd {*}${::qms.args}
   if {${::qms.conf} && ${::qms.file} != ""} {lappend command --config ${::qms.file}}
+  if {!$splash} {lappend command --no-splash}
+  if {$debug} {lappend command --debug}
   if {$language != ""} {lappend command --locale $language}
   if {$fontsize != ""} {lappend command --font-size $fontsize}
   if {$fontfamily != ""} {lappend command --font-family $fontfamily}
   if {$style != ""} {lappend command --style $style}
-  set ::env(QT_SCALE_FACTOR) ${::qms.scale}
-  set ::env(QT_ENABLE_HIGHDPI_SCALING) ${::qms.highdpi}
-# set ::env(QTWEBENGINE_CHROMIUM_FLAGS) "--single-process"
+  set ::env(QT_SCALE_FACTOR) $scale
+  set ::env(QT_ENABLE_HIGHDPI_SCALING) $highdpi
 
   set name "QMapShack \[QMS\]"
   cputi "[mc m54 $name] ..."
   cputs [get_shell_command $command]
 
-  process_start $command qms
-
-  if {![process_running qms] || $debug == -1} return
-
-  if {$::tcl_platform(os) == "Darwin"} { # "lldb" command
-    namespace upvar qms pid pid
-    cputw "Run debug command: lldb --attach-pid $pid"
+  if {$debugger} {
+    if {$::tcl_platform(os) == "Darwin"} {
+      namespace upvar srv pid pid
+      set script "$::tmpdir/qmsdebug.command"
+      set fd [open $script w+]
+      puts $fd "#!/bin/bash"
+      foreach item {PATH TMPDIR QT_SCALE_FACTOR QT_ENABLE_HIGHDPI_SCALING} {
+	puts $fd "export $item=[set ::env($item)]"
+      }
+      puts $fd "$::debug_cmd -- [get_shell_command $command]"
+      puts $fd "kill $pid"
+      close $fd
+      file attributes $script -permissions 0755
+      set command [list open -W $script]
+    }
   }
+
+  process_start $command qms
 
 }
 
