@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 package require Tk
 wm withdraw .
 
-set version "2026-05-09"
+set version "2026-06-22"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -399,6 +399,7 @@ set user.scale 1.00
 set text.scale 1.00
 set symbol.scale 1.00
 set line.scale 1.00
+set tile.scale 1.00
 set font.size [font configure TkDefaultFont -size]
 set console.show 0
 set console.geometry ""
@@ -986,8 +987,9 @@ proc save_task_settings {task} {
   set file $::ini_folder/task.$task.ini
   file delete $file
   save_settings $file \
-	maps.language maps.selection maps.world maps.contrast maps.gamma \
-	theme.selection user.scale text.scale symbol.scale line.scale \
+	maps.language maps.selection maps.world theme.selection \
+	tile.scale user.scale text.scale symbol.scale line.scale \
+	maps.contrast maps.gamma \
 	shading.layer shading.onoff shading.algorithm \
 	shading.simple.linearity shading.simple.scale \
 	shading.diffuselight.angle shading.asy.values \
@@ -1476,41 +1478,56 @@ update_shading_window
 # --- End of hillshading
 # --- Begin of visual rendering effects
 
-# Scaling
-
-label .effects.scaling -text [mc s01]
-
-label .effects.user_label -text [mc s02]:
-scale .effects.user_scale -from 0.05 -to 2.50 -resolution 0.05 \
-	-orient horizontal -variable user.scale
-bind .effects.user_scale <Shift-ButtonRelease-1> "set user.scale 1.00"
-label .effects.user_value -textvariable user.scale -width 4 \
-	-relief sunken
-
-label .effects.text_label -text [mc s03]:
-scale .effects.text_scale -from 0.05 -to 2.50 -resolution 0.05 \
-	-orient horizontal -variable text.scale
-bind .effects.text_scale <Shift-ButtonRelease-1> "set text.scale 1.00"
-label .effects.text_value -textvariable text.scale -width 4 \
-	-relief sunken
-
-label .effects.symbol_label -text [mc s04]:
-scale .effects.symbol_scale -from 0.05 -to 2.50 -resolution 0.05 \
-	-orient horizontal -variable symbol.scale
-bind .effects.symbol_scale <Shift-ButtonRelease-1> "set symbol.scale 1.00"
-label .effects.symbol_value -textvariable symbol.scale -width 4 \
-	-relief sunken
-
-label .effects.line_label -text [mc s05]:
-scale .effects.line_scale -from 0.05 -to 2.50 -resolution 0.05 \
-	-orient horizontal -variable line.scale
-bind .effects.line_scale <Shift-ButtonRelease-1> "set line.scale 1.00"
-label .effects.line_value -textvariable line.scale -width 4 \
-	-relief sunken
-
 set row 0
+
+# Tile scaling
+
+label .effects.tiles -text [mc s01]
+
+label .effects.tile_label -text [mc s02 $tile_size]:
+scale .effects.tile_scale -from 0.25 -to 2.50 -resolution 0.25 \
+	-digits 3 -orient horizontal -variable tile.scale
+bind .effects.tile_scale <Shift-ButtonRelease-1> "set tile.scale 1.00"
+label .effects.tile_value -textvariable tile.scale -width 4 \
+	-relief sunken
+
+if {$server_version > 280000} {
+  incr row
+  grid .effects.tiles -row $row -column 1 -columnspan 3
+  incr row
+  grid .effects.tile_label -row $row -column 1 -sticky w -padx {0 2}
+  grid .effects.tile_scale -row $row -column 2
+  grid .effects.tile_value -row $row -column 3
+}
+
+# Elements scaling
+
+label .effects.scaling -text [mc s03]
+
+label .effects.user_label -text [mc s04]:
+scale .effects.user_scale
+label .effects.user_value
+
+label .effects.text_label -text [mc s05]:
+scale .effects.text_scale
+label .effects.text_value
+
+label .effects.symbol_label -text [mc s06]:
+scale .effects.symbol_scale
+label .effects.symbol_value
+
+label .effects.line_label -text [mc s07]:
+scale .effects.line_scale
+label .effects.line_value
+
+incr row
 grid .effects.scaling -row $row -column 1 -columnspan 3
 foreach item {user text symbol line} {
+  .effects.${item}_scale configure -from 0.10 -to 2.50 -resolution 0.05 \
+	-orient horizontal -variable ${item}.scale
+  .effects.${item}_value configure -textvariable ${item}.scale -width 4 \
+	-relief sunken
+  bind .effects.${item}_scale <Shift-ButtonRelease-1> "set ${item}.scale 1.00"
   incr row
   grid .effects.${item}_label -row $row -column 1 -sticky w -padx {0 2}
   grid .effects.${item}_scale -row $row -column 2
@@ -1519,25 +1536,24 @@ foreach item {user text symbol line} {
 
 # Gamma correction & Contrast-stretching
 
-label .effects.color -text [mc s06]
+label .effects.color -text [mc s08]
 
-label .effects.gamma_label -text [mc s07]:
-scale .effects.gamma_scale -from 0.01 -to 4.99 -resolution 0.01 \
-	-orient horizontal -variable maps.gamma
+label .effects.gamma_label -text [mc s09]:
+scale .effects.gamma_scale -from 0.01 -to 4.99 -resolution 0.01
 bind .effects.gamma_scale <Shift-ButtonRelease-1> "set maps.gamma 1.00"
-label .effects.gamma_value -textvariable maps.gamma -width 4 \
-	-relief sunken
+label .effects.gamma_value
 
-label .effects.contrast_label -text [mc s08]:
-scale .effects.contrast_scale -from 0 -to 254 -resolution 1 \
-	-orient horizontal -variable maps.contrast
+label .effects.contrast_label -text [mc s10]:
+scale .effects.contrast_scale -from 0 -to 254 -resolution 1
 bind .effects.contrast_scale <Shift-ButtonRelease-1> "set maps.contrast 0"
-label .effects.contrast_value -textvariable maps.contrast -width 4 \
-	-relief sunken
+label .effects.contrast_value
 
-set row 10
+incr row
 grid .effects.color -row $row -column 1 -columnspan 3
 foreach item {gamma contrast} {
+  .effects.${item}_scale configure -orient horizontal -variable maps.${item}
+  .effects.${item}_value configure -textvariable maps.${item} -width 4 \
+	-relief sunken
   incr row
   grid .effects.${item}_label -row $row -column 1 -sticky w -padx {0 2}
   grid .effects.${item}_scale -row $row -column 2
@@ -1553,8 +1569,8 @@ tooltip .effects.reset [mc b92t]
 grid .effects.reset -row 99 -column 1 -columnspan 3 -pady {5 0}
 
 proc reset_effects_values {} {
-  foreach item {user.scale text.scale symbol.scale line.scale maps.gamma} \
-	{set ::$item 1.00}
+  foreach item {tile user text symbol line} {set ::${item}.scale 1.00}
+  set ::maps.gamma 1.00
   set ::maps.contrast 0
 }
 
@@ -2227,8 +2243,9 @@ proc save_global_settings {} {
   set ::window.geometry "$x $y $width $height"
   save_settings $::ini_folder/global.ini \
 	rendering.engine maps.language \
-	maps.selection maps.world maps.contrast maps.gamma \
-	theme.selection user.scale text.scale symbol.scale line.scale \
+	maps.selection maps.world theme.selection \
+	tile.scale user.scale text.scale symbol.scale line.scale \
+	maps.contrast maps.gamma \
 	tcp.maxconn log.requests \
 	window.geometry font.size \
 	console.show console.geometry console.font.size
@@ -2310,8 +2327,8 @@ proc font_size_incr {incr} {
   foreach item {.themes.values .styles.values .shading.algorithm.values \
 	.server.engine.values .server.interface.values} \
 	{if {[winfo exists $item]} {$item configure -justify left}}
-  foreach item {.effects.user_scale .effects.text_scale \
-	.effects.symbol_scale .effects.line_scale \
+  foreach item {.effects.tile_scale .effects.user_scale \
+	.effects.text_scale .effects.symbol_scale .effects.line_scale \
 	.effects.gamma_scale .effects.contrast_scale \
 	.qms.scale.scale} \
 	{if {[winfo exists $item]} {$item configure -width $height}}
@@ -2349,8 +2366,8 @@ proc write_mapsforge {task} {
   lappend data <MinZoomLevel>$min</MinZoomLevel>
   lappend data <MaxZoomLevel>$max</MaxZoomLevel>
   set url http://127.0.0.1:${::tcp.port}/%1/%2/%3.png?task=$task
-  if {$::tile_size != 256} {append url &tileRenderSize=$::tile_size}
-  lappend data <ServerUrl>$url</ServerUrl>"
+  if {$::tile_size != 256} {append url &amp\;tileRenderSize=$::tile_size}
+  lappend data <ServerUrl>$url</ServerUrl>
   lappend data </Layer>
   lappend data </TMS>
 
@@ -2482,15 +2499,15 @@ proc process_running {process} {
 # Mapsforge server start
 
 proc srv_task_create {task} {
-  set file $::ini_folder/task.$task.ini
-  if {![file exists $file]} return
-
-  set fd [open $file r]
-  while {[gets $fd line] != -1} {
-    regexp {^(.*?)=(.*)$} $line "" name value
-    set $name $value
+  foreach item [list ${::task.active} $task] {
+    set file $::ini_folder/task.$item.ini
+    if {[catch {open $file r} fd]} return
+    while {[gets $fd line] != -1} {
+      regexp {^(.*?)=(.*)$} $line "" name value
+      set $name $value
+    }
+    close $fd
   }
-  close $fd
 
   # Map: on, off?
 
@@ -2532,6 +2549,7 @@ proc srv_task_create {task} {
       lappend params symbol-scale ${symbol.scale}
       lappend params user-scale ${user.scale}
       lappend params line-scale ${line.scale}
+      lappend params tile-scale ${tile.scale}
     }
 
     if {($subtask == "Map" && $shading == 1) || \
@@ -2563,6 +2581,7 @@ proc srv_task_create {task} {
 	}
       }
       lappend params demfolder ${dem.folder}
+      lappend params tile-scale ${tile.scale}
     }
 
     if {[llength $params] == 0} {

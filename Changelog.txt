@@ -1,3 +1,12 @@
+2026-06-22
+
+- Escaped character & according to XML conventions in TMS map files,
+  optionally required by URL query parameter(s) "tileRenderSize"
+- Added tile scaling option
+  Hint: Scale tiles and all map elements by 1.25
+        on a 125% scaled display to avoid blur
+- Minor script optimizations
+
 2026-05-09
 
 - Added hyperlinks to QMapShack's & Mapsforge Server's home page
