@@ -1,3 +1,10 @@
+2026-08-13
+
+- Support for Mapsforge Server 0.29.0.0 or newer
+  Note: Java runtime environment (JRE) version 17 or newer required
+- Updated README
+- Minor script optimizations
+
 2026-06-22
 
 - Escaped character & according to XML conventions in TMS map files,

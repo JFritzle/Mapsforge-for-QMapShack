@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 package require Tk
 wm withdraw .
 
-set version "2026-06-22"
+set version "2026-08-13"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -121,6 +121,8 @@ Listbox.takeFocus 1
 Scale.highlightThickness 1
 Scale.showValue 0
 Scale.takeFocus 1
+TCombobox.validate key
+TCombobox.validateCommand "{return 0}"
 Tooltip*Label.padX 2
 Tooltip*Label.padY 2
 } {eval option add *$item $value}
@@ -660,7 +662,7 @@ if {$rc || $java_version == 0} \
 
 # Check minimum required Java version
 
-set java_version_min 11
+set java_version_min 17
 if {$java_version < $java_version_min} \
   {error_message [mc e07 Java $java_string $java_version_min] exit}
 
@@ -1098,7 +1100,6 @@ set width [expr $width/[font measure TkTextFont "0"]+1]
 labelframe .themes -text [mc l17]:
 pack .themes -in .f -fill x -pady 1
 combobox .themes.values -width $width \
-	-validate key -validatecommand {return 0} \
 	-textvariable theme.selection -values $themes
 if {[.themes.values current] < 0} {.themes.values current 0}
 pack .themes.values -fill x
@@ -1106,7 +1107,7 @@ pack .themes.values -fill x
 # Mapsforge theme style selection
 
 labelframe .styles -text [mc l18]:
-combobox .styles.values -validate key -validatecommand {return 0}
+combobox .styles.values
 pack .styles.values -fill x
 bind .styles.values <<ComboboxSelected>> update_overlays_selection
 
@@ -1323,7 +1324,6 @@ set list {stdasy simplasy hiresasy}
 if {$server_version >= 230001} {lappend list adaptasy}
 lappend list simple diffuselight
 combobox .shading.algorithm.values -width 12 \
-	-validate key -validatecommand {return 0} \
 	-textvariable shading.algorithm -values $list
 if {[.shading.algorithm.values current] < 0} \
 	{.shading.algorithm.values current 0}
@@ -1455,8 +1455,8 @@ foreach item $shading_widgets_int {
 }
 
 foreach item [concat $shading_widgets_float $shading_widgets_int] {
-  bind $item <Shift-ButtonRelease-1> \
-	{set [%W cget -textvariable] [lindex ${::%W.minmax} 2]}
+  bind $item <Shift-Button-1> \
+	{set [%W cget -textvariable] [lindex ${::%W.minmax} 2]; break}
 }
 
 # Save hillshading settings to folder ini_folder
@@ -1484,11 +1484,12 @@ set row 0
 
 label .effects.tiles -text [mc s01]
 
-label .effects.tile_label -text [mc s02 $tile_size]:
+label .effects.tile_label -text [mc s02]:
 scale .effects.tile_scale -from 0.25 -to 2.50 -resolution 0.25 \
-	-digits 3 -orient horizontal -variable tile.scale
-bind .effects.tile_scale <Shift-ButtonRelease-1> "set tile.scale 1.00"
-label .effects.tile_value -textvariable tile.scale -width 4 \
+	-digits 3 -orient horizontal -variable tile.scale -command tilesize
+proc tilesize {scale} {set ::tile.size [expr int($::tile_size * $scale)]}
+bind .effects.tile_scale <Shift-Button-1> ".effects.tile_scale set 1.00; break"
+label .effects.tile_value -textvariable tile.size -width 4 \
 	-relief sunken
 
 if {$server_version > 280000} {
@@ -1527,7 +1528,7 @@ foreach item {user text symbol line} {
 	-orient horizontal -variable ${item}.scale
   .effects.${item}_value configure -textvariable ${item}.scale -width 4 \
 	-relief sunken
-  bind .effects.${item}_scale <Shift-ButtonRelease-1> "set ${item}.scale 1.00"
+  bind .effects.${item}_scale <Shift-Button-1> "set ${item}.scale 1.00; break"
   incr row
   grid .effects.${item}_label -row $row -column 1 -sticky w -padx {0 2}
   grid .effects.${item}_scale -row $row -column 2
@@ -1540,12 +1541,12 @@ label .effects.color -text [mc s08]
 
 label .effects.gamma_label -text [mc s09]:
 scale .effects.gamma_scale -from 0.01 -to 4.99 -resolution 0.01
-bind .effects.gamma_scale <Shift-ButtonRelease-1> "set maps.gamma 1.00"
+bind .effects.gamma_scale <Shift-Button-1> "set maps.gamma 1.00; break"
 label .effects.gamma_value
 
 label .effects.contrast_label -text [mc s10]:
 scale .effects.contrast_scale -from 0 -to 254 -resolution 1
-bind .effects.contrast_scale <Shift-ButtonRelease-1> "set maps.contrast 0"
+bind .effects.contrast_scale <Shift-Button-1> "set maps.contrast 0; break"
 label .effects.contrast_value
 
 incr row
@@ -1625,7 +1626,6 @@ set width [expr $width/[font measure TkTextFont "0"]+1]
 
 labelframe .server.engine -text [mc x04]:
 combobox .server.engine.values -width $width \
-	-validate key -validatecommand {return 0} \
 	-textvariable rendering.engine -values $engines
 if {[.server.engine.values current] < 0} \
 	{.server.engine.values current 0}
@@ -1684,8 +1684,8 @@ proc reset_server_values {} {
 
 foreach widget {.server.port.value .server.maxconn.value} {
   $widget configure -validate all -vcmd {validate_number %W %V %P " " int}
-  bind $widget <Shift-ButtonRelease-1> \
-	{set [%W cget -textvariable] [lindex ${::%W.minmax} 2]}
+  bind $widget <Shift-Button-1> \
+	{set [%W cget -textvariable] [lindex ${::%W.minmax} 2]; break}
 }
 
 # --- End of server settings
@@ -1776,7 +1776,6 @@ if {![info exists qms.language]} {
 
 labelframe .qms.lang -labelanchor w -text [mc y09]:
 combobox .qms.lang.values -width 4 -justify center \
-	-validate key -validatecommand {return 0} \
 	-textvariable qms.language -values $list
 if {$qms_version >= 12000} {
 pack .qms.lang -fill x -pady 1
@@ -1794,7 +1793,6 @@ labelframe .qms.fontfamily -labelanchor w -text [mc y11]:
 set list [font families]
 lappend list ""
 combobox .qms.fontfamily.values -width 24 \
-	-validate key -validatecommand {return 0} \
 	-textvariable qms.fontfamily -values [lsort $list]
 if {$qms_version > 12001} {
 pack .qms.fontsize -fill x -pady 1
@@ -1815,7 +1813,7 @@ switch $tcl_platform(os) {
 }
 labelframe .qms.style -labelanchor w -text [mc y12]:
 pack .qms.style -fill x -pady 1
-combobox .qms.style.values -width 24 \
+combobox .qms.style.values -width 24 -validate none \
 	-textvariable qms.style -values $list
 pack .qms.style.values -side right -padx {3 0}
 
@@ -1833,7 +1831,7 @@ labelframe .qms.scale -labelanchor w -text [mc y16]:
 tooltip .qms.scale [mc y16t]
 scale .qms.scale.scale -from 0.500 -to 2.500 -resolution [expr 1./60.] \
 	-digits 4 -orient horizontal -variable qms.scale
-bind .qms.scale.scale <Shift-ButtonRelease-1> "set qms.scale 1.000"
+bind .qms.scale.scale <Shift-Button-1> "set qms.scale 1.000; break"
 label .qms.scale.value -textvariable qms.scale -width 5 \
 	-relief sunken
 pack .qms.scale -fill x -pady 1
@@ -3039,7 +3037,7 @@ busy_state 0
 
 # Wait for new selection or finish
 
-bind .buttons.continue <Double-ButtonPress-1> "set restart_srv 1"
+bind .buttons.continue <Double-Button-1> "set restart_srv 1"
 
 update idletasks
 if {![info exists action]} {vwait action}

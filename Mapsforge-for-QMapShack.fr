@@ -52,7 +52,7 @@ c04	"Configurer le serveur"
 c05	"Configurer QMapShack"
 
 s01	"Mise à l'échelle des tuiles"
-s02	"Défaut %d pixels"
+s02	"Dimension [px]"
 s03	"Mise à l'échelle des éléments cartographiques"
 s04	"Tous les éléments"
 s05	"Étiquettes"

@@ -52,7 +52,7 @@ c04	"Server konfigurieren"
 c05	"QMapShack konfigurieren"
 
 s01	"Kacheln skalieren"
-s02	"Default %d Pixel"
+s02	"Dimension [px]"
 s03	"Skalierbare Kartenelemente skalieren"
 s04	"Alle Elemente"
 s05	"Beschriftungen"

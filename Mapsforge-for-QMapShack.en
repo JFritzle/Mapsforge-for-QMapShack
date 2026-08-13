@@ -52,7 +52,7 @@ c04	"Configure server"
 c05	"Configure QMapShack"
 
 s01	"Scaling of tiles"
-s02	"Default %d pixels"
+s02	"Dimension [px]"
 s03	"Scaling of scalable map elements"
 s04	"All elements"
 s05	"Text labels"
