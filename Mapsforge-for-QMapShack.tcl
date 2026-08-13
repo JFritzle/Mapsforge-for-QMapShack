@@ -1488,7 +1488,7 @@ label .effects.tile_label -text [mc s02]:
 scale .effects.tile_scale -from 0.25 -to 2.50 -resolution 0.25 \
 	-digits 3 -orient horizontal -variable tile.scale -command tilesize
 proc tilesize {scale} {set ::tile.size [expr int($::tile_size * $scale)]}
-bind .effects.tile_scale <Shift-Button-1> ".effects.tile_scale set 1.00; break"
+bind .effects.tile_scale <Shift-Button-1> "%W set 1.00; break"
 label .effects.tile_value -textvariable tile.size -width 4 \
 	-relief sunken
 
@@ -1528,7 +1528,7 @@ foreach item {user text symbol line} {
 	-orient horizontal -variable ${item}.scale
   .effects.${item}_value configure -textvariable ${item}.scale -width 4 \
 	-relief sunken
-  bind .effects.${item}_scale <Shift-Button-1> "set ${item}.scale 1.00; break"
+  bind .effects.${item}_scale <Shift-Button-1> "%W set 1.00; break"
   incr row
   grid .effects.${item}_label -row $row -column 1 -sticky w -padx {0 2}
   grid .effects.${item}_scale -row $row -column 2
@@ -1541,12 +1541,12 @@ label .effects.color -text [mc s08]
 
 label .effects.gamma_label -text [mc s09]:
 scale .effects.gamma_scale -from 0.01 -to 4.99 -resolution 0.01
-bind .effects.gamma_scale <Shift-Button-1> "set maps.gamma 1.00; break"
+bind .effects.gamma_scale <Shift-Button-1> "%W set 1.00; break"
 label .effects.gamma_value
 
 label .effects.contrast_label -text [mc s10]:
 scale .effects.contrast_scale -from 0 -to 254 -resolution 1
-bind .effects.contrast_scale <Shift-Button-1> "set maps.contrast 0; break"
+bind .effects.contrast_scale <Shift-Button-1> "%W set 0; break"
 label .effects.contrast_value
 
 incr row
@@ -1831,7 +1831,7 @@ labelframe .qms.scale -labelanchor w -text [mc y16]:
 tooltip .qms.scale [mc y16t]
 scale .qms.scale.scale -from 0.500 -to 2.500 -resolution [expr 1./60.] \
 	-digits 4 -orient horizontal -variable qms.scale
-bind .qms.scale.scale <Shift-Button-1> "set qms.scale 1.000; break"
+bind .qms.scale.scale <Shift-Button-1> "%W set 1.000; break"
 label .qms.scale.value -textvariable qms.scale -width 5 \
 	-relief sunken
 pack .qms.scale -fill x -pady 1
