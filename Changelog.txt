@@ -1,3 +1,11 @@
+2026-10-29
+
+- Added support of zipped theme files (server version > 0.30.0.1)
+- Prevent from potential freezing when the output console
+  rapidly receives an unexpected huge number of output lines:
+  debug output, exceptions, tracebacks, etc.
+- Show OS and version in output console
+
 2026-08-13
 
 - Support for Mapsforge Server 0.29.0.0 or newer

@@ -3,7 +3,7 @@
 
 # Important:
 # - Only new "tasks" server type supported!
-# - At least Java version 11 required!
+# - At least Java version 17 required!
 
 # Notes:
 # - Additional user settings file is mandatory!
@@ -25,7 +25,7 @@ if {[encoding system] != "utf-8"} {
 package require Tk
 wm withdraw .
 
-set version "2026-08-13"
+set version "2026-10-29"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -587,6 +587,8 @@ proc cputw {text} {cputs "\[+++\] $text"}
 cputw [mc m51 [pid] [file tail [info nameofexecutable]]]
 cputw "Tcl/Tk version $tcl_patchLevel"
 cputw "Script '[file tail $script]' version $version"
+cputw "OS $tcl_platform(os) version $tcl_platform(osVersion)\
+	($tcl_platform(machine))"
 
 # Show error message
 
@@ -736,15 +738,26 @@ if {[llength $maps] == 0} {error_message [mc e06] exit}
 
 cd $themes_folder
 set themes [find_files "" "*.xml"]
+if {$server_version > 300001} {
+  set zipfiles [find_files "" "*.zip"]
+  foreach file $zipfiles {
+    zipfile::decode::open $file
+    set dict [zipfile::decode::archive]
+    set list [zipfile::decode::files $dict]
+    foreach item [lsearch -inline -all $list "*.xml"] \
+	{lappend themes "$file\($item\)"}
+    zipfile::decode::close
+  }
+}
 cd $cwd
 
 zipfile::decode::open $server_jar
 set dict [zipfile::decode::archive]
 set list [zipfile::decode::files $dict]
 foreach item [lsearch -inline -all $list "assets/mapsforge/*.xml"] {
-  zipfile::decode::copyfile $dict $item $tmpdir/$item
   set item ([string toupper [file rootname [file tail $item]]])
-  if {$item != "(DEFAULT)" && $item != "(HILLSHADING)"} {lappend themes $item}
+  if {$item != "(DEFAULT)" && $item != "(HILLSHADING)"} \
+	{lappend themes $item}
 }
 zipfile::decode::close
 
@@ -1292,7 +1305,9 @@ radiobutton .shading.onmap -text [mc c81] -state disabled \
 tooltip .shading.onmap [mc c81t]
 radiobutton .shading.asmap -text [mc c82] \
 	-variable shading.layer -value asmap
-tooltip .shading.asmap [mc c82t]
+tooltip .shading.asmap "?" 
+bind .shading.asmap <Enter> {tooltip %W [mc c82t \
+	[string trimright "Mapsforge Hillshading ${::task.active}"]]}
 pack .shading.onmap .shading.asmap -fill x
 
 # Choose DEM folder with HGT files
@@ -1905,19 +1920,30 @@ proc update_theme_styles_overlays {} {
   save_theme_settings
   destroy [winfo children .overlays]
 
-  # Read theme from server's assets or from file
-
+  # Read theme ...
   set theme ${::theme.selection}
-  if {[regexp {^\(.*\)$} $theme]} {
-    set file [string tolower [string trim $theme ()]].xml
-    set file $::tmpdir/assets/mapsforge/$file
+  if {[regexp {^\((.+)\)$} $theme {} theme]} {
+    # ... from server's assets
+    set theme assets/mapsforge/[string tolower $theme].xml
+    zipfile::decode::open $::server_jar
+    set dict [zipfile::decode::archive]
+    set data [::zipfile::decode::getfile $dict $theme]
+    zipfile::decode::close
+    set data [encoding convertfrom utf-8 $data]
+  } elseif {[regexp {^(.+\.zip)\((.+\.xml)\)$} $theme {} file theme]} {
+    # ... from zip file
+    zipfile::decode::open $::themes_folder/$file
+    set dict [zipfile::decode::archive]
+    set data [::zipfile::decode::getfile $dict $theme]
+    zipfile::decode::close
+    set data [encoding convertfrom utf-8 $data]
   } else {
+    # ... from xml file
     set file $::themes_folder/$theme
-  }
-
-  if {![catch "open {$file} r" fd]} {
-    set data [read $fd]
-    close $fd
+    if {![catch "open {$file} r" fd]} {
+      set data [read $fd]
+      close $fd
+    }
   }
 
   if {![info exists data]} {
@@ -2442,17 +2468,22 @@ proc process_start {command process} {
     set mark \[[string toupper $process]\]
     cputi "$m51 $mark"
 
+    set eofmsg m52
+    set eofvar action
     proc fevent {} {uplevel #0 {
-      set text {}
-      while {[gets $fd line] >= 0} {lappend text "$mark $line"}
-      if {$text != {}} {cputs [join $text \n]}
+      set text ""
+      while {[gets $fd line] >= 0} {append text "$mark $line\n"}
+      if {$text != ""} {
+	cputs [string range $text 0 end-1]
+	thread::send $sid update
+      }
       if {![eof $fd]} return
       fileevent $fd readable {}
-      cputi "$m52 $mark"
+      cputi "[set $eofmsg] $mark"
       thread::send -async $sid "
 	namespace delete $process
 	set $process.eof 1
-	set action 0
+	set [set eofvar] 0
 	"
       close $fd
       thread::release
@@ -2470,7 +2501,7 @@ proc process_kill {process} {
   if {![process_running $process]} return
   namespace upvar $process tid tid pid pid
 
-  thread::send $tid {proc fevent {} [regsub m52 [info body fevent] m53]}
+  thread::send -async -head $tid {set eofmsg m53}
 
   switch $::tcl_platform(os) {
     "Windows NT" {catch {exec TASKKILL /F /PID $pid /T}}
@@ -2548,6 +2579,7 @@ proc srv_task_create {task} {
       lappend params user-scale ${user.scale}
       lappend params line-scale ${line.scale}
       lappend params tile-scale ${tile.scale}
+      #lappend params neighbour-labels true
     }
 
     if {($subtask == "Map" && $shading == 1) || \
@@ -2750,7 +2782,7 @@ proc srv_stop {} {
   if {![process_running srv]} return
   namespace upvar srv tid tid port port
 
-  thread::send $tid {proc fevent {} [regsub action [info body fevent] "{}"]}
+  thread::send $tid {set eofvar "{}"}
 
   set url http://127.0.0.1:$port/terminate
   if {![catch {::http::geturl $url} token]} {
@@ -2777,7 +2809,7 @@ proc qms_start {} {
     }
   }
 
-  foreach item {splash debug language fontsize fontfamily style scale highdpi} \
+  foreach item {splash debug language fontsize fontfamily style color scale highdpi} \
 	{set $item [string trim [set ::qms.$item]]}
 
   lappend command $::qms_cmd {*}${::qms.args}

@@ -116,7 +116,7 @@ c80	"Activer l'ombrage du relief"
 c81	"Ombrage sur la carte"
 c81t	"L'ombrage doit être activé\ndans le thème Mapsforge"
 c82	"Ombrage comme carte"
-c82t	"Activer la carte de QMapShack\n'Mapsforge Hillshading'"
+c82t	"Activer la carte de QMapShack\n'%s'"
 
 l81	"Dossier DEM (Digital Elevation Model)"
 l81t	"Fichiers HGT avec données d'altitude et/ou\narchives ZIP contenant un fichier HGT portant le même nom.\nExemple: archive N49E008.zip contenant le fichier N49E008.hgt"
