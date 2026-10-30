@@ -61,6 +61,7 @@ Mapsforge tile server itself does not use points-of-interest files (POI, file ex
 
 7.	**Mapsforge themes**  
 Mapsforge themes _Elevate_ and _Elements_ (file extension _.xml_) suitable for OpenAndroMaps are available for download at [openandromaps.org](https://www.openandromaps.org).  
+Starting with Mapsforge server 0.31.0.0, zipped Mapsforge theme files are supported too and unpacking downloaded ZIP file is no longer required.  
 **Note**:  
 In order "Hillshading on map" to be applied to rendered map tiles, hillshading has to be enabled in theme file too. _Elevate_ and _Elements_ themes version 5 or higher do enable hillshading.  
 
