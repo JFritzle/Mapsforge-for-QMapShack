@@ -1,10 +1,6 @@
 # GUI to make Mapsforge maps and themes available to QMapShack
 # ============================================================
 
-# Important:
-# - Only new "tasks" server type supported!
-# - At least Java version 17 required!
-
 # Notes:
 # - Additional user settings file is mandatory!
 #   Name of file = this script's full path
@@ -25,7 +21,7 @@ if {[encoding system] != "utf-8"} {
 package require Tk
 wm withdraw .
 
-set version "2026-10-29"
+set version "2026-11-02"
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -2501,7 +2497,7 @@ proc process_kill {process} {
   if {![process_running $process]} return
   namespace upvar $process tid tid pid pid
 
-  thread::send -async -head $tid {set eofmsg m53}
+  catch "thread::send -async -head $tid {set eofmsg m53}"
 
   switch $::tcl_platform(os) {
     "Windows NT" {catch {exec TASKKILL /F /PID $pid /T}}
@@ -2579,7 +2575,7 @@ proc srv_task_create {task} {
       lappend params user-scale ${user.scale}
       lappend params line-scale ${line.scale}
       lappend params tile-scale ${tile.scale}
-      #lappend params neighbour-labels true
+      #lappend params neighbor-labels true
     }
 
     if {($subtask == "Map" && $shading == 1) || \
@@ -2809,7 +2805,7 @@ proc qms_start {} {
     }
   }
 
-  foreach item {splash debug language fontsize fontfamily style color scale highdpi} \
+  foreach item {splash debug language fontsize fontfamily style scale highdpi} \
 	{set $item [string trim [set ::qms.$item]]}
 
   lappend command $::qms_cmd {*}${::qms.args}
