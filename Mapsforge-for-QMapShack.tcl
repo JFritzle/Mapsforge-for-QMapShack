@@ -21,7 +21,7 @@ if {[encoding system] != "utf-8"} {
 package require Tk
 wm withdraw .
 
-set version "2026-11-02"
+set version 2026-11-11
 set script [file normalize [info script]]
 set title [file tail $script]
 
@@ -304,11 +304,11 @@ if {![info exists locale]} {
 set file [file rootname $script].ini
 if {![file exist $file]} {
   messagebox -title $title -icon error \
-	-message "[mc i01 [file tail $file]]"
+	-message [mc i01 [file tail $file]]
   exit
 } elseif {[catch {source $file} result]} {
   messagebox -title $title -icon error \
-	-message "[mc i00 [file tail $file]]:\n$result"
+	-message [mc i00 [file tail $file]]:\n$result
   exit
 }
 
@@ -355,17 +355,17 @@ cd $cwd
 if {$tcl_platform(os) == "Windows NT"} {
   package require registry
   if {![info exists env(TMP)]} {set env(TMP) $env(HOME)]}
-  append env(TMP) \\[format "TMS%8.8x" [pid]]
+  append env(TMP) \\[format TMS%8.8x [pid]]
   set tmpdir [file normalize $env(TMP)]
   set nprocs $env(NUMBER_OF_PROCESSORS)
 } elseif {$tcl_platform(os) == "Linux"} {
   if {![info exists env(TMPDIR)]} {set env(TMPDIR) /tmp}
-  append env(TMPDIR) /[format "TMS%8.8x" [pid]]
+  append env(TMPDIR) /[format TMS%8.8x [pid]]
   set tmpdir $env(TMPDIR)
   set nprocs [exec /usr/bin/nproc]
 } elseif {$tcl_platform(os) == "Darwin"} {
   if {![info exists env(TMPDIR)]} {set env(TMPDIR) /tmp}
-  append env(TMPDIR) /[format "TMS%8.8x" [pid]]
+  append env(TMPDIR) /[format TMS%8.8x [pid]]
   set tmpdir $env(TMPDIR)
   set nprocs [exec sysctl -n hw.ncpu]
 } else {
@@ -429,7 +429,7 @@ set max_zoom_level [expr min(20,$max_zoom_level)]
 set qms.conf 0
 set qms.file ""
 set qms.args ""
-set qms.default {splash 0 style Fusion fontsize "" fontfamily "" \
+set qms.default {splash 0 style Fusion scheme 0 fontsize "" fontfamily "" \
 	scale 1.000 highdpi 1 debug 0 debugger 0}
 lmap {i v} ${qms.default} {set qms.$i $v}
 
@@ -526,7 +526,7 @@ bind .konsole <Control-KP_Subtract> {console_font_size_incr -1}
 
 bind .konsole <Configure> {
   if {"%W" != ".konsole"} continue
-  scan [wm geometry %W] "%%dx%%d+%%d+%%d" cols rows x y
+  scan [wm geometry %W] %%dx%%d+%%d+%%d cols rows x y
   set console.geometry "$x $y $cols $rows"
 }
 
@@ -642,8 +642,7 @@ if {$tcl_platform(os) == "Windows NT" &&
 set java_version 0
 set java_string unknown
 set command [list $java_cmd -version]
-set rc [catch "exec $command 2>@1" result]
-if {!$rc} {
+if {![catch "exec $command 2>@1" result]} {
   set line [lindex [split $result \n] 0]
   regsub -nocase {^.* version "(.*)".*$} $line {\1} data
   set java_string $data
@@ -655,7 +654,7 @@ if {!$rc} {
   }
 }
 
-if {$rc || $java_version == 0} \
+if {$java_version == 0} \
   {error_message [mc e08 Java [get_shell_command $command] $result] exit}
 
 # Check minimum required Java version
@@ -680,7 +679,7 @@ switch $tcl_platform(os) {
 set server_version 0
 set server_string unknown
 set command [list $java_cmd -jar $server_jar -help]
-set rc [catch "exec $command 2>@1" result]
+catch "exec $command 2>@1" result
 foreach line [split $result \n] {
   if {![regexp -nocase {^(?:.* version: )([0-9.]+)$} $line "" data]} continue
   set server_string $data
@@ -691,7 +690,7 @@ foreach line [split $result \n] {
   break
 }
 
-if {$rc || $server_version == 0} \
+if {$server_version == 0} \
   {error_message [mc e08 Server [get_shell_command $command] $result] exit}
 if {$server_version < 220000} \
   {error_message [mc e07 "Mapsforge Server" $server_string 0.22.0.0] exit}
@@ -701,8 +700,7 @@ if {$server_version < 220000} \
 set qms_version 0
 set qms_string unknown
 set command [list $qms_cmd --version]
-set rc [catch "exec $command 2>@1" result]
-if {!$rc} {
+if {![catch "exec $command 2>@1" result]} {
   set line [lindex [split $result \n] 0]
   regsub -nocase {^.* (.*)$} $line {\1} data
   set qms_string $data
@@ -724,7 +722,7 @@ proc find_files {folder pattern} {
 # Get list of available Mapsforge maps
 
 cd $maps_folder
-set maps [find_files "" "*.map"]
+set maps [find_files "" *.map]
 cd $cwd
 set maps [lsort -dictionary $maps]
 if {[llength $maps] == 0} {error_message [mc e06] exit}
@@ -733,15 +731,15 @@ if {[llength $maps] == 0} {error_message [mc e06] exit}
 # and add Mapsforge server's built-in themes
 
 cd $themes_folder
-set themes [find_files "" "*.xml"]
+set themes [find_files "" *.xml]
 if {$server_version > 300001} {
-  set zipfiles [find_files "" "*.zip"]
+  set zipfiles [find_files "" *.zip]
   foreach file $zipfiles {
     zipfile::decode::open $file
     set dict [zipfile::decode::archive]
     set list [zipfile::decode::files $dict]
-    foreach item [lsearch -inline -all $list "*.xml"] \
-	{lappend themes "$file\($item\)"}
+    foreach item [lsearch -inline -all $list *.xml] \
+	{lappend themes $file\($item\)}
     zipfile::decode::close
   }
 }
@@ -750,7 +748,7 @@ cd $cwd
 zipfile::decode::open $server_jar
 set dict [zipfile::decode::archive]
 set list [zipfile::decode::files $dict]
-foreach item [lsearch -inline -all $list "assets/mapsforge/*.xml"] {
+foreach item [lsearch -inline -all $list assets/mapsforge/*.xml] {
   set item ([string toupper [file rootname [file tail $item]]])
   if {$item != "(DEFAULT)" && $item != "(HILLSHADING)"} \
 	{lappend themes $item}
@@ -806,7 +804,7 @@ lappend task.use ""
 set task.use [lmap task ${task.set} \
 	{if {"$task" ni ${task.use}} continue;set task}]
 
-labelframe .task -labelanchor w -text "[mc l02]: " -bd 0
+labelframe .task -labelanchor w -text "[mc l02] " -bd 0
 entry .task.name -width 28 -textvariable task.name \
 	-takefocus 1 -highlightthickness 0
 bind .task.name <Return> task_item_add
@@ -851,7 +849,7 @@ proc task_list_post {} {
   set tn .task.name
   set x [winfo rootx $tn]
   set y [winfo rooty $tn]
-  scan [winfo geometry $tn] "%dx%d" w h
+  scan [winfo geometry $tn] %dx%d w h
   incr w [winfo width .task.post]
   incr y $h
 
@@ -1045,7 +1043,7 @@ proc restore_task_settings {task} {
 
 if {$language == ""} {set language $locale}
 if {![info exists maps.language]} {set maps.language $language}
-labelframe .lang -labelanchor w -text [mc l11]:
+labelframe .lang -labelanchor w -text [mc l11]
 pack .lang -in .f -fill x -pady 1
 entry .lang.value -textvariable maps.language -width 4 -justify center
 pack .lang.value -side right
@@ -1060,13 +1058,13 @@ foreach item {.lang .lang.value} {tooltip $item [mc l11t]}
 
 # Mapsforge map selection
 
-labelframe .maps_folder -text [mc l13]:
+labelframe .maps_folder -text [mc l13]
 pack .maps_folder -in .f -fill x -pady 1
 entry .maps_folder.value -textvariable maps_folder \
 	-state readonly -takefocus 0 -highlightthickness 0
 pack .maps_folder.value -fill x
 
-labelframe .maps -text [mc l14]:
+labelframe .maps -text [mc l14]
 pack .maps -in .f -fill x -pady 1
 scrollbar .maps.scroll -command ".maps.values yview"
 listbox .maps.values -selectmode extended -activestyle none \
@@ -1095,7 +1093,7 @@ pack .maps_world -in .f -fill x
 
 # Mapsforge theme selection
 
-labelframe .themes_folder -text [mc l16]:
+labelframe .themes_folder -text [mc l16]
 pack .themes_folder -in .f -fill x -pady 1
 entry .themes_folder.value -textvariable themes_folder \
 	-state readonly -takefocus 0 -highlightthickness 0
@@ -1104,9 +1102,9 @@ pack .themes_folder.value -fill x
 set width 0
 foreach item $themes \
 	{set width [expr max([font measure TkTextFont $item],$width)]}
-set width [expr $width/[font measure TkTextFont "0"]+1]
+set width [expr $width/[font measure TkTextFont 0]+1]
 
-labelframe .themes -text [mc l17]:
+labelframe .themes -text [mc l17]
 pack .themes -in .f -fill x -pady 1
 combobox .themes.values -width $width \
 	-textvariable theme.selection -values $themes
@@ -1115,7 +1113,7 @@ pack .themes.values -fill x
 
 # Mapsforge theme style selection
 
-labelframe .styles -text [mc l18]:
+labelframe .styles -text [mc l18]
 combobox .styles.values
 pack .styles.values -fill x
 bind .styles.values <<ComboboxSelected>> update_overlays_selection
@@ -1216,12 +1214,12 @@ proc show_hide_toplevel_window {widget} {
   if {$onoff} {
     resize_toplevel_window $widget
     position_toplevel_window $widget
-    scan [wm geometry $widget] "%*dx%*d+%d+%d" x y
+    scan [wm geometry $widget] %*dx%*d+%d+%d x y
     wm transient $widget .
     wm deiconify $widget
     if {[tk windowingsystem] == "x11"} {after idle "wm geometry $widget +$x+$y"}
   } else {
-    scan [wm geometry $widget] "%*dx%*d+%d+%d" x y
+    scan [wm geometry $widget] %*dx%*d+%d+%d x y
     set ::{$widget.dx} [expr $x - [set ::{$widget.x}]]
     set ::{$widget.dy} [expr $y - [set ::{$widget.y}]]
     wm withdraw $widget
@@ -1245,15 +1243,13 @@ proc resize_toplevel_window {widget} {
 proc position_toplevel_window {widget} {
   if {![winfo ismapped .]} return
   update idletasks
-  scan [wm geometry .] "%dx%d+%d+%d" width height x y
+  scan [wm geometry .] %dx%d+%d+%d width height x y
   if {[tk windowingsystem] == "win32"} {
     set bdwidth [expr [winfo rootx .]-$x]
   } elseif {[tk windowingsystem] == "x11"} {
     set bdwidth 2
-    if {[auto_execok xwininfo] == ""} {
-      cputw "Please install program 'xwininfo' by package manager"
-      cputw "to evaluate exact window border width."
-    } elseif {![catch {exec bash -c "export LANG=C;xwininfo -id [wm frame .] \
+    if {[auto_execok xwininfo] != "" && \
+        ![catch {exec bash -c "export LANG=C;xwininfo -id [wm frame .] \
 	| grep Width | cut -d: -f2"} wmwidth]} {
       set bdwidth [expr ($wmwidth-$width)/2]
       set width $wmwidth
@@ -1301,7 +1297,7 @@ radiobutton .shading.onmap -text [mc c81] -state disabled \
 tooltip .shading.onmap [mc c81t]
 radiobutton .shading.asmap -text [mc c82] \
 	-variable shading.layer -value asmap
-tooltip .shading.asmap "?" 
+tooltip .shading.asmap ? 
 bind .shading.asmap <Enter> {tooltip %W [mc c82t \
 	[string trimright "Mapsforge Hillshading ${::task.active}"]]}
 pack .shading.onmap .shading.asmap -fill x
@@ -1310,7 +1306,7 @@ pack .shading.onmap .shading.asmap -fill x
 
 if {![file isdirectory ${dem.folder}]} {set dem.folder ""}
 
-labelframe .shading.dem_folder -text [mc l81]:
+labelframe .shading.dem_folder -text [mc l81]
 tooltip .shading.dem_folder [mc l81t]
 pack .shading.dem_folder -fill x -pady 1
 entry .shading.dem_folder.value -textvariable dem.folder \
@@ -1329,7 +1325,7 @@ proc choose_dem_folder {} {
 
 # Hillshading algorithm
 
-labelframe .shading.algorithm -labelanchor w -text [mc l83]:
+labelframe .shading.algorithm -labelanchor w -text [mc l83]
 pack .shading.algorithm -fill x -pady 2
 set list {stdasy simplasy hiresasy}
 if {$server_version >= 230001} {lappend list adaptasy}
@@ -1342,12 +1338,12 @@ pack .shading.algorithm.values -side right
 
 # Hillshading algorithm parameters
 
-labelframe .shading.simple -labelanchor w -text [mc l84]:
+labelframe .shading.simple -labelanchor w -text [mc l84]
 entry .shading.simple.value1 -textvariable shading.simple.linearity \
 	-width 8 -justify right
 set .shading.simple.value1.minmax {0 1 0.1}
 tooltip .shading.simple.value1 "0 ≤ [mc l84] ≤ 1"
-label .shading.simple.label2 -text [mc l85]:
+label .shading.simple.label2 -text [mc l85]
 entry .shading.simple.value2 -textvariable shading.simple.scale \
 	-width 8 -justify right
 set .shading.simple.value2.minmax {0 10 0.666}
@@ -1355,7 +1351,7 @@ tooltip .shading.simple.value2 "0 ≤ [mc l85] ≤ 10"
 pack .shading.simple.value1 .shading.simple.label2 .shading.simple.value2 \
 	-side left -expand 1 -fill x -padx {3 0}
 
-labelframe .shading.diffuselight -labelanchor w -text [mc l86]:
+labelframe .shading.diffuselight -labelanchor w -text [mc l86]
 entry .shading.diffuselight.value -textvariable shading.diffuselight.angle \
 	-width 8 -justify right
 set .shading.diffuselight.value.minmax {0 90 50.}
@@ -1364,7 +1360,7 @@ pack .shading.diffuselight.value -side right -padx {3 0}
 
 frame .shading.asy
 foreach i {0 1 2} {
-  label .shading.asy.label$i -text [mc l88$i]:
+  label .shading.asy.label$i -text [mc l88$i]
   entry .shading.asy.value$i -textvariable shading.asy.array($i) \
 	-width 8 -justify right
   grid .shading.asy.label$i -row $i -column 1 -sticky w -padx {0 2}
@@ -1383,7 +1379,7 @@ grid columnconfigure .shading.asy 1 -weight 1
 
 # Hillshading magnitude
 
-labelframe .shading.magnitude -labelanchor w -text [mc l87]:
+labelframe .shading.magnitude -labelanchor w -text [mc l87]
 pack .shading.magnitude -fill x
 entry .shading.magnitude.value -textvariable shading.magnitude \
 	-width 8 -justify right
@@ -1394,14 +1390,14 @@ pack .shading.magnitude.value -side right -padx {3 0}
 # Theme's hillshading zoom
 
 frame .shading.zoom
-checkbutton .shading.zoom.min_apply -text [mc l891]: \
+checkbutton .shading.zoom.min_apply -text [mc l891] \
 	-variable shading.zoom.min.apply \
 	-onvalue true -offvalue false -command update_shading_zoom_levels
 entry .shading.zoom.min_value -textvariable shading.zoom.min.value \
 	-width 8 -justify right
 set .shading.zoom.min_value.minmax {0 20 9}
 tooltip .shading.zoom.min_value "0 ≤ [mc l891] ≤ [mc l892]"
-checkbutton .shading.zoom.max_apply -text [mc l892]: \
+checkbutton .shading.zoom.max_apply -text [mc l892] \
 	-variable shading.zoom.max.apply \
 	-onvalue true -offvalue false -command update_shading_zoom_levels
 entry .shading.zoom.max_value -textvariable shading.zoom.max.value \
@@ -1495,13 +1491,14 @@ set row 0
 
 label .effects.tiles -text [mc s01]
 
-label .effects.tile_label -text [mc s02]:
+label .effects.tile_label -text [mc s02]
 scale .effects.tile_scale -from 0.25 -to 2.50 -resolution 0.25 \
 	-digits 3 -orient horizontal -variable tile.scale -command tilesize
-proc tilesize {scale} {set ::tile.size [expr int($::tile_size * $scale)]}
 bind .effects.tile_scale <Shift-Button-1> "%W set 1.00; break"
 label .effects.tile_value -textvariable tile.size -width 4 \
 	-relief sunken
+proc tilesize {scale} {set ::tile.size [expr int($::tile_size * $scale)]}
+tilesize ${tile.scale}
 
 if {$server_version > 280000} {
   incr row
@@ -1516,19 +1513,19 @@ if {$server_version > 280000} {
 
 label .effects.scaling -text [mc s03]
 
-label .effects.user_label -text [mc s04]:
+label .effects.user_label -text [mc s04]
 scale .effects.user_scale
 label .effects.user_value
 
-label .effects.text_label -text [mc s05]:
+label .effects.text_label -text [mc s05]
 scale .effects.text_scale
 label .effects.text_value
 
-label .effects.symbol_label -text [mc s06]:
+label .effects.symbol_label -text [mc s06]
 scale .effects.symbol_scale
 label .effects.symbol_value
 
-label .effects.line_label -text [mc s07]:
+label .effects.line_label -text [mc s07]
 scale .effects.line_scale
 label .effects.line_value
 
@@ -1550,12 +1547,12 @@ foreach item {user text symbol line} {
 
 label .effects.color -text [mc s08]
 
-label .effects.gamma_label -text [mc s09]:
+label .effects.gamma_label -text [mc s09]
 scale .effects.gamma_scale -from 0.01 -to 4.99 -resolution 0.01
 bind .effects.gamma_scale <Shift-Button-1> "%W set 1.00; break"
 label .effects.gamma_value
 
-label .effects.contrast_label -text [mc s10]:
+label .effects.contrast_label -text [mc s10]
 scale .effects.contrast_scale -from 0 -to 254 -resolution 1
 bind .effects.contrast_scale <Shift-Button-1> "%W set 0; break"
 label .effects.contrast_value
@@ -1581,9 +1578,8 @@ tooltip .effects.reset [mc b92t]
 grid .effects.reset -row 99 -column 1 -columnspan 3 -pady {5 0}
 
 proc reset_effects_values {} {
-  foreach item {tile user text symbol line} {set ::${item}.scale 1.00}
-  set ::maps.gamma 1.00
-  set ::maps.contrast 0
+  foreach item {tile user text symbol line gamma} {.effects.${item}_scale set 1.00}
+  .effects.contrast_scale set 0
 }
 
 # --- End of visual rendering effects
@@ -1597,7 +1593,7 @@ hyperlink .server.title https://github.com/telemaxx/mapsforgesrv
 
 # Mapsforge server jar archive
 
-labelframe .server.jar -text [mc x01]:
+labelframe .server.jar -text [mc x01]
 pack .server.jar -fill x -pady 1
 entry .server.jar.value -textvariable server_jar \
 	-state readonly -takefocus 0 -highlightthickness 0
@@ -1605,14 +1601,14 @@ pack .server.jar.value -fill x
 
 # Mapsforge server version
 
-labelframe .server.version -labelanchor w -text [mc x02]:
+labelframe .server.version -labelanchor w -text [mc x02]
 pack .server.version -fill x -pady 1
 label .server.version.value -text $server_string
 pack .server.version.value -side right
 
 # Java runtime version
 
-labelframe .server.jre_version -labelanchor w -text [mc x03]:
+labelframe .server.jre_version -labelanchor w -text [mc x03]
 pack .server.jre_version -fill x -pady 1
 label .server.jre_version.value -text $java_string
 pack .server.jre_version.value -side right
@@ -1633,9 +1629,9 @@ set engines [lsort -dictionary $engines]
 set width 0
 foreach item $engines \
 	{set width [expr max([font measure TkTextFont $item],$width)]}
-set width [expr $width/[font measure TkTextFont "0"]+1]
+set width [expr $width/[font measure TkTextFont 0]+1]
 
-labelframe .server.engine -text [mc x04]:
+labelframe .server.engine -text [mc x04]
 combobox .server.engine.values -width $width \
 	-textvariable rendering.engine -values $engines
 if {[.server.engine.values current] < 0} \
@@ -1647,7 +1643,7 @@ if {[llength $engines] > 1} {
 
 # Server interface
 
-labelframe .server.interface -labelanchor w -text [mc x05]:
+labelframe .server.interface -labelanchor w -text [mc x05]
 combobox .server.interface.values -width 10 \
 	-textvariable tcp.interface -values {localhost all}
 if {[.server.interface.values current] < 0} \
@@ -1657,7 +1653,7 @@ pack .server.interface.values -side right -padx {3 0}
 
 # Server TCP port number
 
-labelframe .server.port -labelanchor w -text [mc x06]:
+labelframe .server.port -labelanchor w -text [mc x06]
 entry .server.port.value -textvariable tcp.port \
 	-width 6 -justify center
 set .server.port.value.minmax "1024 65535 $tcp_port"
@@ -1667,7 +1663,7 @@ pack .server.port.value -side right -padx {3 0}
 
 # Maximum size of TCP listening queue
 
-labelframe .server.maxconn -labelanchor w -text [mc x07]:
+labelframe .server.maxconn -labelanchor w -text [mc x07]
 entry .server.maxconn.value -textvariable tcp.maxconn \
 	-width 6 -justify center
 set .server.maxconn.value.minmax {0 {} 1024}
@@ -1710,7 +1706,7 @@ hyperlink .qms.title https://github.com/Maproom/qmapshack
 
 # Application path
 
-labelframe .qms.cmd -text [mc y01]:
+labelframe .qms.cmd -text [mc y01]
 pack .qms.cmd -fill x -pady 1
 entry .qms.cmd.value -textvariable qms_cmd \
 	-state readonly -takefocus 0 -highlightthickness 0
@@ -1719,7 +1715,7 @@ pack .qms.cmd.value -fill x
 # Application version
 
 if {$qms_version} {
-labelframe .qms.version -labelanchor w -text [mc y02]:
+labelframe .qms.version -labelanchor w -text [mc y02]
 pack .qms.version -fill x -pady 1
 label .qms.version.value -text $qms_string
 pack .qms.version.value -side right
@@ -1727,7 +1723,7 @@ pack .qms.version.value -side right
 
 # Configuration file
 
-checkbutton .qms.conf -text [mc y03]: -variable qms.conf
+checkbutton .qms.conf -text [mc y03] -variable qms.conf
 tooltip .qms.conf [mc y03t]
 pack .qms.conf -fill x
 
@@ -1764,10 +1760,10 @@ pack .qms.debug -fill x
 
 set folder [file dirname $qms_cmd]
 switch $tcl_platform(os) {
-  "Windows NT"	{append folder /translations}
-  "Linux"	{append folder /../share/qmapshack/translations}
-  "Darwin"	{append folder /../Resources/translations}
+  "Linux"	{append folder /../share/qmapshack}
+  "Darwin"	{append folder /../Resources}
 }
+append folder /translations
 
 set list {"" en}
 if {[file isdirectory $folder]} {
@@ -1785,7 +1781,7 @@ if {![info exists qms.language]} {
   }
 }
 
-labelframe .qms.lang -labelanchor w -text [mc y09]:
+labelframe .qms.lang -labelanchor w -text [mc y09]
 combobox .qms.lang.values -width 4 -justify center \
 	-textvariable qms.language -values $list
 if {$qms_version >= 12000} {
@@ -1795,12 +1791,11 @@ pack .qms.lang.values -side right -padx {3 0}
 
 # Application font properties
 
-labelframe .qms.fontsize -labelanchor w -text [mc y10]:
+labelframe .qms.fontsize -labelanchor w -text [mc y10]
 entry .qms.fontsize.value -textvariable qms.fontsize \
 	-validate key -validatecommand {regexp {^\s*[0-9]*\.?[0-9]*\s*$} %P} \
 	-width 6 -justify right
-tooltip .qms.fontsize.value "Points (pt)"
-labelframe .qms.fontfamily -labelanchor w -text [mc y11]:
+labelframe .qms.fontfamily -labelanchor w -text [mc y11]
 set list [font families]
 lappend list ""
 combobox .qms.fontfamily.values -width 24 \
@@ -1815,22 +1810,50 @@ set qms.fontsize ""
 set qms.fontfamily ""
 }
 
-# Window style
+# Qt style
 
-switch $tcl_platform(os) {
-  "Windows NT"	{set list {Fusion Windows Windows11 WindowsVista ""}}
-  "Linux"	{set list {Fusion Windows ""}}
-  "Darwin"	{set list {Fusion macOS Windows ""}}
-}
-labelframe .qms.style -labelanchor w -text [mc y12]:
+labelframe .qms.style -labelanchor w -text [mc y12]
 pack .qms.style -fill x -pady 1
-combobox .qms.style.values -width 24 -validate none \
-	-textvariable qms.style -values $list
+combobox .qms.style.values -width 12 -textvariable qms.style 
 pack .qms.style.values -side right -padx {3 0}
+
+# Color scheme
+
+labelframe .qms.scheme -labelanchor w -text [mc y13]
+combobox .qms.scheme.values -width 12 -values [mc y13v]
+pack .qms.scheme.values -side right -padx {3 0}
+.qms.scheme.values current ${::qms.scheme}
+bind .qms.scheme.values <<ComboboxSelected>> {set qms.scheme [%W current]}
+
+# Configure by QMapShack help
+
+after idle {
+set command [list $::qms_cmd --help]
+if {![catch "exec $command 2>@1" result]} {
+  if {[regexp -line {(?:--style.*\n.*:)(.*)} $result {} list]} {
+    regsub -all { } $list {} list
+    set styles [lsort -nocase [split $list ,]]
+  }
+  if {[regexp -line {(?:--color-scheme)} $result {}]} {
+    pack .qms.scheme -fill x -pady 1 -after .qms.style
+  }
+}
+if {![info exists styles]} {
+  switch $tcl_platform(os) {
+    "Windows NT" {set styles {Fusion Windows Windows11 WindowsVista ""}}
+    "Linux"	 {set styles {Fusion Windows ""}}
+    "Darwin"	 {set styles {Fusion macOS Windows ""}}
+  }
+  .qms.scheme.values configure -validate none
+}
+.qms.style.values configure -values $styles
+if {${::qms.style} ni $styles} {set ::qms.style Fusion}
+if {[winfo manager .qms.scheme] == ""} {set ::qms.scheme 0} 
+}
 
 # Additional command line parameters
 
-labelframe .qms.args -text [mc y15]:
+labelframe .qms.args -text [mc y15]
 pack .qms.args -fill x -pady 1
 entry .qms.args.value -textvariable qms.args -width 32 \
 	-takefocus 1 -highlightthickness 0
@@ -1838,7 +1861,7 @@ pack .qms.args.value -fill x
 
 # Scale window
 
-labelframe .qms.scale -labelanchor w -text [mc y16]:
+labelframe .qms.scale -labelanchor w -text [mc y16]
 tooltip .qms.scale [mc y16t]
 scale .qms.scale.scale -from 0.500 -to 2.500 -resolution [expr 1./60.] \
 	-digits 4 -orient horizontal -variable qms.scale
@@ -2259,7 +2282,7 @@ update_theme_selection
 # Save global settings to folder ini_folder
 
 proc save_global_settings {} {
-  scan [wm geometry .] "%dx%d+%d+%d" width height x y
+  scan [wm geometry .] %dx%d+%d+%d width height x y
   set ::window.geometry "$x $y $width $height"
   save_settings $::ini_folder/global.ini \
 	rendering.engine maps.language \
@@ -2275,7 +2298,7 @@ proc save_global_settings {} {
 
 proc save_qmapshack_settings {} {
   save_settings $::ini_folder/qmapshack.ini \
-	qms.conf qms.file qms.splash qms.style \
+	qms.conf qms.file qms.splash qms.style qms.scheme \
 	qms.language qms.fontsize qms.fontfamily \
 	qms.args qms.scale qms.highdpi \
 	qms.debug qms.debugger \
@@ -2657,7 +2680,7 @@ proc srv_start {} {
     lappend params --patch-module java.desktop="$engine"
   }
 
-# set now [clock format [clock seconds] -format "%Y-%m-%d_%H-%M-%S"]
+# set now [clock format [clock seconds] -format %Y-%m-%d_%H-%M-%S]
 # lappend params -Xloggc:$::cwd/gc.$now.log -XX:+PrintGCDetails
   lappend params -Dslf4j.internal.verbosity=WARN
 
@@ -2805,8 +2828,8 @@ proc qms_start {} {
     }
   }
 
-  foreach item {splash debug language fontsize fontfamily style scale highdpi} \
-	{set $item [string trim [set ::qms.$item]]}
+  foreach item {splash debug language fontsize fontfamily style scheme \
+	scale highdpi} {set $item [string trim [set ::qms.$item]]}
 
   lappend command $::qms_cmd {*}${::qms.args}
   if {${::qms.conf} && ${::qms.file} != ""} {lappend command --config ${::qms.file}}
@@ -2816,6 +2839,8 @@ proc qms_start {} {
   if {$fontsize != ""} {lappend command --font-size $fontsize}
   if {$fontfamily != ""} {lappend command --font-family $fontfamily}
   if {$style != ""} {lappend command --style $style}
+  if {$scheme == 1} {lappend command --color-scheme light}
+  if {$scheme == 2} {lappend command --color-scheme dark}
   set ::env(QT_SCALE_FACTOR) $scale
   set ::env(QT_ENABLE_HIGHDPI_SCALING) $highdpi
 
@@ -2867,11 +2892,7 @@ proc qms_stop {} {
   } elseif {$::tcl_platform(os) == "Linux"} {
 
     cputi "[mc m56 $pid $exe] ..."
-    if {[auto_execok wmctrl] == ""} {
-      cputw "Please install program 'wmctrl' by package manager"
-      cputw "to be able to close desktop windows of process '$exe'."
-      return
-    }
+    if {[auto_execok wmctrl] == ""} return
     # Search desktop windows of process and children
     set window_ids {}
     if {[catch {exec pgrep -d " " -P $pid} list]} {set list {}}
@@ -3112,7 +3133,7 @@ wm withdraw .
 # Wait until output console window was closed
 
 if {[winfo ismapped .konsole]} {
-  console_write "\n[mc m99]\b"
+  console_write \n[mc m99]\b
   wm protocol .konsole WM_DELETE_WINDOW {}
   bind .konsole <ButtonRelease-3> {destroy .konsole}
   tkwait window .konsole

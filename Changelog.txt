@@ -1,3 +1,11 @@
+2026-11-11
+
+- Populate list of available Qt's window styles from
+  actually available ones
+- Extended QMS config menu to allow forcing color scheme
+  "light" or "dark" (QMapShack version > 1.21.1 or
+  QMapShack version 1.21.1 including update QMS-1293)
+
 2026-11-02
 
 - Fixed script error: can't read "::qms.color": no such variable
